@@ -1,11 +1,15 @@
-import cors from "cors";
+import { toNodeHandler } from "better-auth/node";
+// import cors from "cors";
 import express, {
   type Application,
   type Request,
   type Response,
 } from "express";
+import { auth } from "./app/lib/auth";
 
 const app: Application = express();
+
+
 
 // app.use(
 //   cors({
@@ -22,6 +26,7 @@ const app: Application = express();
 // );
 
 // app.use("/api/auth", toNodeHandler(auth));
+app.all("/api/auth/*", toNodeHandler(auth));
 
 // Enable URL-encoded form data parsing
 app.use(express.urlencoded({ extended: true }));
@@ -37,7 +42,7 @@ app.use(express.urlencoded({ extended: true }));
 app.get("/", async (req: Request, res: Response) => {
   res.status(201).json({
     success: true,
-    message: "API is working",
+    message: "Eco Pulse Application API is working",
   });
 });
 
