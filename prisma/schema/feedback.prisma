@@ -1,0 +1,7 @@
+model Feedback {
+    id      String @id @default(uuid())
+    message String
+
+    ideaId String @unique
+    idea   Idea   @relation(fields: [ideaId], references: [id])
+}

@@ -1,0 +1,28 @@
+enum Role {
+    MEMBER
+    ADMIN
+}
+
+enum UserStatus {
+    ACTIVE
+    BLOCKED
+    DELETED
+}
+
+enum IdeaStatus {
+    DRAFT
+    REVIEW
+    APPROVED
+    REJECTED
+}
+
+enum PaymentGateway {
+    STRIPE
+    SSLCOMMERZ
+}
+
+enum PaymentStatus {
+    PENDING
+    PAID
+    FAILED
+}

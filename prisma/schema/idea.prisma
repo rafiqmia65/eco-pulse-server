@@ -1,0 +1,40 @@
+model Idea {
+    id          String  @id @default(uuid())
+    title       String  @db.VarChar(150)
+    problem     String  @db.Text
+    solution    String  @db.Text
+    description String  @db.Text
+    image       String?
+
+    slug String? @unique
+
+    isPaid Boolean @default(false)
+    price  Float?
+
+    status IdeaStatus @default(REVIEW)
+
+    authorId String
+    author   User   @relation(fields: [authorId], references: [id])
+
+    categoryId String
+    category   Category @relation(fields: [categoryId], references: [id])
+
+    votes    Vote[]
+    comments Comment[]
+    payments Payment[]
+
+    feedback Feedback?
+
+    votesCount     Int @default(0)
+    commentsCount  Int @default(0)
+    watchListCount Int @default(0)
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    watchLists WatchList[]
+
+    @@index([authorId])
+    @@index([categoryId])
+    @@index([status])
+}
