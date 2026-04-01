@@ -26,7 +26,7 @@ const app: Application = express();
 // );
 
 // app.use("/api/auth", toNodeHandler(auth));
-app.all("/api/auth/*", toNodeHandler(auth));
+app.all("/api/auth/*path", toNodeHandler(auth));
 
 // Enable URL-encoded form data parsing
 app.use(express.urlencoded({ extended: true }));

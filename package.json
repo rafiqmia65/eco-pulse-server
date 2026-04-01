@@ -8,7 +8,8 @@
     "dev": "npx tsx watch src/server.ts",
     "lint": "eslint ./src/**/*",
     "start": "node dist/server.js",
-    "build": "tsc"
+    "build": "prisma generate && tsup src/server.ts --format esm --platform node --target node20 --outDir api --external pg-native",
+    "postinstall": "prisma generate"
   },
   "type": "module",
   "keywords": [],
@@ -21,6 +22,7 @@
     "@types/pg": "^8.20.0",
     "eslint": "^10.1.0",
     "prisma": "^7.6.0",
+    "tsup": "^8.5.1",
     "tsx": "^4.21.0",
     "typescript": "^6.0.2",
     "typescript-eslint": "^8.57.2"
