@@ -7,9 +7,13 @@ let server: Server;
 const bootstrap = async () => {
   try {
     // await seedSuperAdmin();
-    server = app.listen(envVars.PORT, () => {
-      console.log(`Server is running on http://localhost:${envVars.PORT}`);
-    });
+    if (envVars.NODE_ENV === "development") {
+      const port = process.env.PORT || 5000;
+
+      server = app.listen(port, () => {
+        console.log(`Server is running on http://localhost:${port}`);
+      });
+    }
   } catch (error) {
     console.error("Failed to start server:", error);
   }
