@@ -1,10 +1,11 @@
 // src/app.ts
 import { toNodeHandler } from "better-auth/node";
+import cors from "cors";
 import express from "express";
 
 // src/app/lib/auth.ts
 import { betterAuth } from "better-auth";
-import { prismaAdapter } from "better-auth/adapters/prisma";
+import { PrismaAdapter } from "better-auth/adapters/prisma";
 
 // src/app/lib/prisma.ts
 import "dotenv/config";
@@ -114,7 +115,7 @@ var loadEnvVariables = () => {
     "NODE_ENV",
     "DATABASE_URL",
     "BETTER_AUTH_URL",
-    "BETTER_AUTH_SECRET"
+    "BETTER_AUTH_SECRET",
     // "ACCESS_TOKEN_SECRET",
     // "REFRESH_TOKEN_SECRET",
     // "ACCESS_TOKEN_EXPIRES_IN",
@@ -129,7 +130,7 @@ var loadEnvVariables = () => {
     // "GOOGLE_CLIENT_ID",
     // "GOOGLE_CLIENT_SECRET",
     // "GOOGLE_CALLBACK_URL",
-    // "FRONTEND_URL",
+    "FRONTEND_URL"
     // "CLOUDINARY_CLOUD_NAME",
     // "CLOUDINARY_API_KEY",
     // "CLOUDINARY_API_SECRET",
@@ -151,7 +152,7 @@ var loadEnvVariables = () => {
     NODE_ENV: process.env.NODE_ENV,
     DATABASE_URL: process.env.DATABASE_URL,
     BETTER_AUTH_URL: process.env.BETTER_AUTH_URL,
-    BETTER_AUTH_SECRET: process.env.BETTER_AUTH_SECRET
+    BETTER_AUTH_SECRET: process.env.BETTER_AUTH_SECRET,
     // ACCESS_TOKEN_SECRET: process.env.ACCESS_TOKEN_SECRET as string,
     // REFRESH_TOKEN_SECRET: process.env.REFRESH_TOKEN_SECRET as string,
     // ACCESS_TOKEN_EXPIRES_IN: process.env.ACCESS_TOKEN_EXPIRES_IN as string,
@@ -170,7 +171,7 @@ var loadEnvVariables = () => {
     // GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID as string,
     // GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET as string,
     // GOOGLE_CALLBACK_URL: process.env.GOOGLE_CALLBACK_URL as string,
-    // FRONTEND_URL: process.env.FRONTEND_URL as string,
+    FRONTEND_URL: process.env.FRONTEND_URL
     // CLOUDINARY: {
     //   CLOUDINARY_CLOUD_NAME: process.env.CLOUDINARY_CLOUD_NAME as string,
     //   CLOUDINARY_API_KEY: process.env.CLOUDINARY_API_KEY as string,
@@ -195,7 +196,7 @@ var prisma = new PrismaClient({ adapter });
 var auth = betterAuth({
   baseURL: envVars.BETTER_AUTH_URL,
   secret: envVars.BETTER_AUTH_SECRET,
-  database: prismaAdapter(prisma, {
+  database: new PrismaAdapter(prisma, {
     provider: "postgresql"
     // or "mysql", "postgresql", ...etc
   }),
@@ -245,8 +246,20 @@ var auth = betterAuth({
 
 // src/app.ts
 var app = express();
+app.use(
+  cors({
+    origin: [
+      envVars.FRONTEND_URL,
+      envVars.BETTER_AUTH_URL,
+      "http://localhost:3000",
+      "http://localhost:5000"
+    ],
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
+    allowedHeaders: ["Content-Type", "Authorization"]
+  })
+);
 app.all("/api/auth/*path", toNodeHandler(auth));
-app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.get("/", async (req, res) => {
@@ -261,9 +274,12 @@ var app_default = app;
 var server;
 var bootstrap = async () => {
   try {
-    server = app_default.listen(envVars.PORT, () => {
-      console.log(`Server is running on http://localhost:${envVars.PORT}`);
-    });
+    if (envVars.NODE_ENV === "development") {
+      const port = process.env.PORT || 5e3;
+      server = app_default.listen(port, () => {
+        console.log(`Server is running on http://localhost:${port}`);
+      });
+    }
   } catch (error) {
     console.error("Failed to start server:", error);
   }

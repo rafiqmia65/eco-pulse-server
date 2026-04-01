@@ -1,19 +1,17 @@
 import { Server } from "http";
 import app from "./app";
-// import { seedSuperAdmin } from "./app/utils/seed";
 import { envVars } from "./app/config/env";
+// import { seedSuperAdmin } from "./app/utils/seed";
 
 let server: Server;
 const bootstrap = async () => {
   try {
     // await seedSuperAdmin();
-    if (envVars.NODE_ENV === "development") {
-      const port = process.env.PORT || 5000;
+    const port = envVars.PORT || 5000;
 
-      server = app.listen(port, () => {
-        console.log(`Server is running on http://localhost:${port}`);
-      });
-    }
+    server = app.listen(port, () => {
+      console.log(`Server is running on port ${port}`);
+    });
   } catch (error) {
     console.error("Failed to start server:", error);
   }
