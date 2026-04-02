@@ -3,6 +3,7 @@ import cors from "cors";
 import express, { Application, Request, Response } from "express";
 import { auth } from "./app/lib/auth";
 import { envVars } from "./app/config/env";
+import indexRoutes from "./app/routes/indexRoutes";
 
 const app: Application = express();
 
@@ -20,7 +21,6 @@ app.use(
   }),
 );
 
-// app.use("/api/auth", toNodeHandler(auth));
 app.all("/api/auth/*path", toNodeHandler(auth));
 
 // Enable URL-encoded form data parsing
@@ -31,7 +31,7 @@ app.use(express.json());
 // app.use(cookieParser());
 app.use(express.urlencoded({ extended: true }));
 
-// app.use("/api/v1", indexRoutes);
+app.use("/api/v1", indexRoutes);
 
 // Basic route
 app.get("/", async (req: Request, res: Response) => {
