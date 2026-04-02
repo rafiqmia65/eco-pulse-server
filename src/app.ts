@@ -1,10 +1,6 @@
 import { toNodeHandler } from "better-auth/node";
 import cors from "cors";
-import express, {
-  type Application,
-  type Request,
-  type Response,
-} from "express";
+import express, { Application, Request, Response } from "express";
 import { auth } from "./app/lib/auth";
 import { envVars } from "./app/config/env";
 
