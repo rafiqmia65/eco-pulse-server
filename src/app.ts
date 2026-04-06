@@ -21,7 +21,7 @@ app.use(
   }),
 );
 
-app.all("/api/auth/*path", toNodeHandler(auth));
+app.all("/api/auth/*splat", toNodeHandler(auth));
 
 // Enable URL-encoded form data parsing
 // app.use(express.urlencoded({ extended: true }));
