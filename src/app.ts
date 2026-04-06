@@ -1,9 +1,8 @@
-import { toNodeHandler } from "better-auth/node";
 import cors from "cors";
 import express, { Application, Request, Response } from "express";
-import { auth } from "./app/lib/auth";
 import { envVars } from "./app/config/env";
 import indexRoutes from "./app/routes/indexRoutes";
+import { globalErrorHandler } from "./app/middlewares/globalErrorHandler";
 
 const app: Application = express();
 
@@ -40,5 +39,7 @@ app.get("/", async (req: Request, res: Response) => {
     message: "Eco Pulse Application API is working",
   });
 });
+
+app.use(globalErrorHandler);
 
 export default app;
