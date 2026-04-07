@@ -30,4 +30,11 @@ AuthRoutes.post(
   AuthController.logoutUser,
 );
 
+/**
+ * @route   GET /api/v1/auth/me
+ * @desc    Get current logged-in user info
+ * @access  Private
+ */
+AuthRoutes.get("/me", checkAuth(Role.ADMIN, Role.MEMBER), AuthController.getMe);
+
 export default AuthRoutes;

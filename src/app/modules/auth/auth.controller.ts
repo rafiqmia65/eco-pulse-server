@@ -81,8 +81,36 @@ const logoutUser = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+/**
+ * @desc    Get current logged-in user info
+ * @route   GET /api/v1/auth/me
+ * @access  Private
+ */
+const getMe = catchAsync(async (req: Request, res: Response) => {
+  // Ensure middleware has populated req.user
+  if (!req.user) {
+    return sendResponse(res, {
+      httpStatusCode: status.UNAUTHORIZED,
+      success: false,
+      message: "Unauthorized! User info not found",
+    });
+  }
+
+  // Fetch user info from database
+  const user = await AuthService.getMe(req.user.userId);
+
+  // Send user info response
+  sendResponse(res, {
+    httpStatusCode: status.OK,
+    success: true,
+    message: "User info retrieved successfully",
+    data: user,
+  });
+});
+
 export const AuthController = {
   registerUser,
   loginUser,
   logoutUser,
+  getMe,
 };

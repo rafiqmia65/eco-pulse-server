@@ -186,8 +186,39 @@ const logoutUser = async (sessionToken?: string) => {
   return result;
 };
 
+/**
+ * @desc    Get current logged-in user info
+ * @param   userId - User ID from session/token
+ * @returns User object with selected fields
+ * @throws  AppError if user not found
+ */
+const getMe = async (userId: string) => {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      image: true,
+      role: true,
+      status: true,
+      emailVerified: true,
+      createdAt: true,
+      updatedAt: true,
+    },
+  });
+
+  if (!user) {
+    throw new AppError(status.NOT_FOUND, "User not found");
+  }
+
+  return user;
+};
+
 export const AuthService = {
   registerUser,
   loginUser,
   logoutUser,
+  getMe,
 };
