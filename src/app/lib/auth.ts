@@ -66,4 +66,26 @@ export const auth = betterAuth({
       maxAge: 60 * 60 * 60 * 24, // 1 day in seconds
     },
   },
+  advanced: {
+    // disableCSRFCheck: true,
+    useSecureCookies: process.env.NODE_ENV === "production",
+    cookies: {
+      state: {
+        attributes: {
+          sameSite: "none",
+          secure: true,
+          httpOnly: true,
+          path: "/",
+        },
+      },
+      sessionToken: {
+        attributes: {
+          sameSite: "none",
+          secure: true,
+          httpOnly: true,
+          path: "/",
+        },
+      },
+    },
+  },
 });
