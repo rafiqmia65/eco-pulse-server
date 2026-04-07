@@ -1,5 +1,7 @@
 import { Router } from "express";
 import { AuthController } from "./auth.controller";
+import { checkAuth } from "../../middlewares/checkAuth";
+import { Role } from "../../../../generated/prisma/enums";
 
 const AuthRoutes: Router = Router();
 
@@ -22,6 +24,10 @@ AuthRoutes.post("/login", AuthController.loginUser);
  * @desc    Logout user and invalidate session
  * @access  Private
  */
-AuthRoutes.post("/logout", AuthController.logoutUser);
+AuthRoutes.post(
+  "/logout",
+  checkAuth(Role.ADMIN, Role.MEMBER),
+  AuthController.logoutUser,
+);
 
 export default AuthRoutes;
