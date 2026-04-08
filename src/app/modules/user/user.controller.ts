@@ -47,7 +47,26 @@ const makeAdmin = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+/**
+ * @desc    Block a user
+ * @route   PATCH /api/v1/users/block/:id
+ * @access  Admin only
+ */
+const blockUser = catchAsync(async (req: Request, res: Response) => {
+  const targetUserId = req.params.id;
+
+  const result = await UserService.blockUser(targetUserId as string);
+
+  sendResponse(res, {
+    httpStatusCode: status.OK,
+    success: true,
+    message: "User blocked successfully",
+    data: result,
+  });
+});
+
 export const UserController = {
   updateProfile,
   makeAdmin,
+  blockUser,
 };

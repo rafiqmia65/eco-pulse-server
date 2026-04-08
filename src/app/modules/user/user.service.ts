@@ -82,7 +82,40 @@ const makeAdmin = async (userId: string) => {
   return updatedUser;
 };
 
+const blockUser = async (userId: string) => {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+  });
+
+  if (!user) {
+    throw new AppError(status.NOT_FOUND, "User not found");
+  }
+
+  // already blocked
+  if (user.status === "BLOCKED") {
+    throw new AppError(status.BAD_REQUEST, "User is already blocked");
+  }
+
+  const updatedUser = await prisma.user.update({
+    where: { id: userId },
+    data: {
+      status: "BLOCKED",
+    },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      role: true,
+      status: true,
+      image: true,
+    },
+  });
+
+  return updatedUser;
+};
+
 export const UserService = {
   updateProfile,
   makeAdmin,
+  blockUser,
 };

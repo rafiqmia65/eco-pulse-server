@@ -17,13 +17,24 @@ UserRoutes.patch(
 
 /**
  * @desc    Promote user to admin
- * @route   PATCH /api/v1/users/make-admin/:id
+ * @route   PATCH /api/v1/user/make-admin/:id
  * @access  Admin only
  */
 UserRoutes.patch(
   "/make-admin/:id",
   checkAuth(Role.ADMIN),
   UserController.makeAdmin,
+);
+
+/**
+ * @desc    Block a user
+ * @route   PATCH /api/v1/users/block/:id
+ * @access  Admin only
+ */
+UserRoutes.patch(
+  "/block/:id",
+  checkAuth(Role.ADMIN), // only admin
+  UserController.blockUser,
 );
 
 export default UserRoutes;
