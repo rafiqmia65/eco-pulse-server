@@ -2,6 +2,7 @@ import { prisma } from "../../lib/prisma";
 import status from "http-status";
 import AppError from "../../helpers/errorHelpers/AppError";
 import { IUpdateProfilePayload } from "./user.interface";
+import { UserStatus } from "../../../../generated/prisma/enums";
 
 const updateProfile = async (
   userId: string,
@@ -114,8 +115,50 @@ const blockUser = async (userId: string) => {
   return updatedUser;
 };
 
+/**
+ * @desc    Unblock a user
+ * @route   PATCH /api/v1/users/unblock/:id
+ * @access  Admin only
+ */
+const unblockUser = async (userId: string) => {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+  });
+
+  if (!user) {
+    throw new AppError(status.NOT_FOUND, "User not found");
+  }
+
+  // already active
+  if (user.status === UserStatus.ACTIVE) {
+    throw new AppError(status.BAD_REQUEST, "User is already active");
+  }
+
+  if (user.status === UserStatus.DELETED) {
+    throw new AppError(status.BAD_REQUEST, "Deleted user cannot be unblocked");
+  }
+
+  const updatedUser = await prisma.user.update({
+    where: { id: userId },
+    data: {
+      status: UserStatus.ACTIVE,
+    },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      role: true,
+      status: true,
+      image: true,
+    },
+  });
+
+  return updatedUser;
+};
+
 export const UserService = {
   updateProfile,
   makeAdmin,
   blockUser,
+  unblockUser,
 };

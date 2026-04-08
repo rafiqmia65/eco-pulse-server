@@ -31,10 +31,17 @@ UserRoutes.patch(
  * @route   PATCH /api/v1/users/block/:id
  * @access  Admin only
  */
+UserRoutes.patch("/block/:id", checkAuth(Role.ADMIN), UserController.blockUser);
+
+/**
+ * @desc    Unblock a user
+ * @route   PATCH /api/v1/users/unblock/:id
+ * @access  Admin only
+ */
 UserRoutes.patch(
-  "/block/:id",
-  checkAuth(Role.ADMIN), // only admin
-  UserController.blockUser,
+  "/unblock/:id",
+  checkAuth(Role.ADMIN),
+  UserController.unblockUser,
 );
 
 export default UserRoutes;

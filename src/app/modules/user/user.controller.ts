@@ -65,8 +65,27 @@ const blockUser = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+/**
+ * @desc    Unblock a user
+ * @route   PATCH /api/v1/users/unblock/:id
+ * @access  Admin only
+ */
+const unblockUser = catchAsync(async (req: Request, res: Response) => {
+  const targetUserId = req.params.id;
+
+  const result = await UserService.unblockUser(targetUserId as string);
+
+  sendResponse(res, {
+    httpStatusCode: status.OK,
+    success: true,
+    message: "User unblocked successfully",
+    data: result,
+  });
+});
+
 export const UserController = {
   updateProfile,
   makeAdmin,
   blockUser,
+  unblockUser,
 };
