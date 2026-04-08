@@ -7,3 +7,9 @@ export interface ILoginPayload {
   email: string;
   password: string;
 }
+
+export interface IChangePasswordPayload {
+  oldPassword: string;
+  newPassword: string;
+  confirmPassword: string;
+}

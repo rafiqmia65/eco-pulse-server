@@ -2,6 +2,8 @@ import { Router } from "express";
 import { AuthController } from "./auth.controller";
 import { checkAuth } from "../../middlewares/checkAuth";
 import { Role } from "../../../../generated/prisma/enums";
+import { validateRequest } from "../../middlewares/validateRequest";
+import { changePasswordSchema } from "./auth.validation";
 
 const AuthRoutes: Router = Router();
 
@@ -36,5 +38,18 @@ AuthRoutes.post(
  * @access  Private
  */
 AuthRoutes.get("/me", checkAuth(Role.ADMIN, Role.MEMBER), AuthController.getMe);
+
+/**
+ * @route   POST /api/v1/auth/change-password
+ * @desc    Change user's password
+ * @access  Private
+ */
+
+AuthRoutes.post(
+  "/change-password",
+  checkAuth(Role.ADMIN, Role.MEMBER),
+  validateRequest(changePasswordSchema),
+  AuthController.changePassword,
+);
 
 export default AuthRoutes;

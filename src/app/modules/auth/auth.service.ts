@@ -1,7 +1,11 @@
 import status from "http-status";
 import AppError from "../../helpers/errorHelpers/AppError";
 import { auth } from "../../lib/auth";
-import { ILoginPayload, IRegisterPayload } from "./auth.interface";
+import {
+  IChangePasswordPayload,
+  ILoginPayload,
+  IRegisterPayload,
+} from "./auth.interface";
 import { prisma } from "../../lib/prisma";
 import { UserStatus } from "../../../../generated/prisma/enums";
 import { tokenUtils } from "../../utils/token";
@@ -216,9 +220,93 @@ const getMe = async (userId: string) => {
   return user;
 };
 
+/**
+ * @route   POST /api/v1/auth/change-password
+ * @desc    Change user's password
+ * @access  Private
+ */
+const changePassword = async (
+  payload: IChangePasswordPayload,
+  sessionToken: string,
+) => {
+  const session = await auth.api.getSession({
+    headers: new Headers({
+      Authorization: `Bearer ${sessionToken}`,
+    }),
+  });
+
+  if (!session) {
+    throw new AppError(status.UNAUTHORIZED, "Invalid session token");
+  }
+
+  const { oldPassword, newPassword, confirmPassword } = payload;
+
+  // Manual validation (extra safety, even if Zod exists)
+  if (newPassword !== confirmPassword) {
+    throw new AppError(
+      status.BAD_REQUEST,
+      "New password and confirm password must match",
+    );
+  }
+
+  if (oldPassword === newPassword) {
+    throw new AppError(
+      status.BAD_REQUEST,
+      "New password must be different from old password",
+    );
+  }
+
+  const result = await auth.api.changePassword({
+    body: {
+      currentPassword: oldPassword,
+      newPassword,
+      revokeOtherSessions: true,
+    },
+    headers: new Headers({
+      Authorization: `Bearer ${sessionToken}`,
+    }),
+  });
+
+  // Update needPasswordChange flag if needed
+  if (session.user.needPasswordChange) {
+    await prisma.user.update({
+      where: { id: session.user.id },
+      data: { needPasswordChange: false },
+    });
+  }
+
+  // Generate new tokens
+  const accessToken = tokenUtils.getAccessToken({
+    userId: session.user.id,
+    role: session.user.role,
+    name: session.user.name,
+    email: session.user.email,
+    status: session.user.status,
+    isDeleted: session.user.isDeleted,
+    emailVerified: session.user.emailVerified,
+  });
+
+  const refreshToken = tokenUtils.getRefreshToken({
+    userId: session.user.id,
+    role: session.user.role,
+    name: session.user.name,
+    email: session.user.email,
+    status: session.user.status,
+    isDeleted: session.user.isDeleted,
+    emailVerified: session.user.emailVerified,
+  });
+
+  return {
+    ...result,
+    accessToken,
+    refreshToken,
+  };
+};
+
 export const AuthService = {
   registerUser,
   loginUser,
   logoutUser,
   getMe,
+  changePassword,
 };
