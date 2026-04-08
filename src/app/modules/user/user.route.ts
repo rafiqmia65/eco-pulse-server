@@ -15,4 +15,15 @@ UserRoutes.patch(
   UserController.updateProfile,
 );
 
+/**
+ * @desc    Promote user to admin
+ * @route   PATCH /api/v1/users/make-admin/:id
+ * @access  Admin only
+ */
+UserRoutes.patch(
+  "/make-admin/:id",
+  checkAuth(Role.ADMIN),
+  UserController.makeAdmin,
+);
+
 export default UserRoutes;

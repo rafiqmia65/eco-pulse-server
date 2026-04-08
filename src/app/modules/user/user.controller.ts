@@ -29,6 +29,25 @@ const updateProfile = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+/**
+ * @desc    Promote user to admin
+ * @route   PATCH /api/v1/users/make-admin/:id
+ * @access  Admin only
+ */
+const makeAdmin = catchAsync(async (req: Request, res: Response) => {
+  const targetUserId = req.params.id;
+
+  const updatedUser = await UserService.makeAdmin(targetUserId as string);
+
+  sendResponse(res, {
+    httpStatusCode: status.OK,
+    success: true,
+    message: "User promoted to admin successfully",
+    data: updatedUser,
+  });
+});
+
 export const UserController = {
   updateProfile,
+  makeAdmin,
 };

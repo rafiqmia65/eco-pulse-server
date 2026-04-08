@@ -43,6 +43,46 @@ const updateProfile = async (
   return updatedUser;
 };
 
+/**
+ * @desc    Promote user to admin
+ * @route   PATCH /api/v1/users/make-admin/:id
+ * @access  Admin only
+ */
+
+const makeAdmin = async (userId: string) => {
+  // check user exists
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+  });
+
+  if (!user) {
+    throw new AppError(status.NOT_FOUND, "User not found");
+  }
+
+  // already admin check
+  if (user.role === "ADMIN") {
+    throw new AppError(status.BAD_REQUEST, "User is already an admin");
+  }
+
+  const updatedUser = await prisma.user.update({
+    where: { id: userId },
+    data: {
+      role: "ADMIN",
+    },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      role: true,
+      status: true,
+      image: true,
+    },
+  });
+
+  return updatedUser;
+};
+
 export const UserService = {
   updateProfile,
+  makeAdmin,
 };
