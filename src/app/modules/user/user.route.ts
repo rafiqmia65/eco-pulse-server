@@ -44,4 +44,11 @@ UserRoutes.patch(
   UserController.unblockUser,
 );
 
+/**
+ * @desc    Get a single user by ID
+ * @route   GET /api/v1/users/:id
+ * @access  Admin only
+ */
+UserRoutes.get("/:id", checkAuth(Role.ADMIN), UserController.getUserById);
+
 export default UserRoutes;

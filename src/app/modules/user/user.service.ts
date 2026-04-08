@@ -156,9 +156,36 @@ const unblockUser = async (userId: string) => {
   return updatedUser;
 };
 
+/**
+ * Get a single user by ID
+ * @param userId - ID of the user to fetch
+ */
+const getUserById = async (userId: string) => {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      role: true,
+      status: true,
+      image: true,
+      createdAt: true,
+      updatedAt: true,
+    },
+  });
+
+  if (!user) {
+    throw new AppError(status.NOT_FOUND, "User not found");
+  }
+
+  return user;
+};
+
 export const UserService = {
   updateProfile,
   makeAdmin,
   blockUser,
   unblockUser,
+  getUserById,
 };

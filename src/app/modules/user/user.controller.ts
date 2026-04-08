@@ -83,9 +83,28 @@ const unblockUser = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+/**
+ * @desc    Get a single user by ID
+ * @route   GET /api/v1/users/:id
+ * @access  Admin only
+ */
+const getUserById = catchAsync(async (req: Request, res: Response) => {
+  const { id } = req.params;
+
+  const user = await UserService.getUserById(id as string);
+
+  sendResponse(res, {
+    httpStatusCode: status.OK,
+    success: true,
+    message: "User fetched successfully",
+    data: user,
+  });
+});
+
 export const UserController = {
   updateProfile,
   makeAdmin,
   blockUser,
   unblockUser,
+  getUserById,
 };
