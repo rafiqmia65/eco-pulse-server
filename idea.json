@@ -1,0 +1,62 @@
+[
+  {
+    "title": "Urban Community Garden",
+    "problem": "Many urban areas lack green spaces, reducing local food production and community engagement.",
+    "solution": "Create community-managed gardens on vacant plots to grow organic vegetables and herbs.",
+    "description": "This project will transform unused urban land into productive gardens, encouraging sustainable living, social interaction, and local food production.",
+    "image": "https://example.com/images/urban-garden.jpg",
+    "slug": null,
+    "isPaid": false,
+    "price": null,
+    "categoryId": "Sustainable Agriculture",
+    "isDraft": true
+  },
+  {
+    "title": "Solar Rooftop Initiative",
+    "problem": "High electricity costs and carbon emissions in urban homes.",
+    "solution": "Install solar panels on residential rooftops to reduce dependency on grid electricity and promote renewable energy.",
+    "description": "A community project to encourage rooftop solar installations, offering workshops and subsidies for low-income households.",
+    "image": "https://example.com/images/solar-rooftop.jpg",
+    "slug": "solar-rooftop-initiative",
+    "isPaid": false,
+    "price": null,
+    "categoryId": "Renewable Energy",
+    "isDraft": false
+  },
+  {
+    "title": "Plastic-Free School Campaign",
+    "problem": "Schools generate a large amount of plastic waste daily.",
+    "solution": "Encourage students to use reusable bottles, lunch boxes, and ban single-use plastics in schools.",
+    "description": "Implement awareness programs, competitions, and policies in schools to reduce plastic consumption and create eco-conscious students.",
+    "image": "https://example.com/images/plastic-free-school.jpg",
+    "slug": null,
+    "isPaid": false,
+    "price": null,
+    "categoryId": "Waste Management",
+    "isDraft": false
+  },
+  {
+    "title": "Eco-Friendly Product Marketplace",
+    "problem": "Lack of access to verified eco-friendly products.",
+    "solution": "Build an online marketplace where users can buy certified eco-friendly products from multiple vendors.",
+    "description": "The platform will include product reviews, sustainability ratings, and direct vendor connections to promote conscious consumption.",
+    "image": "https://example.com/images/eco-marketplace.jpg",
+    "slug": "eco-friendly-product-marketplace",
+    "isPaid": true,
+    "price": 49.99,
+    "categoryId": "Eco Products",
+    "isDraft": false
+  },
+  {
+    "title": "Neighborhood Clean-Up Drive",
+    "problem": "Local neighborhoods accumulate waste and litter due to lack of organized cleaning initiatives.",
+    "solution": "Organize volunteer groups to regularly clean streets, parks, and public spaces.",
+    "description": "Community members join clean-up drives, recycling collected waste, and creating awareness campaigns to maintain neighborhood cleanliness.",
+    "image": "https://example.com/images/cleanup-drive.jpg",
+    "slug": null,
+    "isPaid": false,
+    "price": null,
+    "categoryId": "Community Initiatives",
+    "isDraft": false
+  }
+]

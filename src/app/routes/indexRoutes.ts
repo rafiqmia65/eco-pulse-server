@@ -2,6 +2,7 @@ import { Router } from "express";
 import AuthRoutes from "../modules/auth/auth.routes";
 import UserRoutes from "../modules/user/user.route";
 import categoryRoutes from "../modules/category/category.route";
+import ideaRoutes from "../modules/idea/idea.route";
 
 const indexRoutes: Router = Router();
 
@@ -13,5 +14,8 @@ indexRoutes.use("/users", UserRoutes);
 
 // Mount the categoryRoutes under the /categories path
 indexRoutes.use("/categories", categoryRoutes);
+
+// Mount the ideaRoutes under the /ideas path
+indexRoutes.use("/ideas", ideaRoutes);
 
 export default indexRoutes;
