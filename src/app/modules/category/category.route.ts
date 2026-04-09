@@ -19,4 +19,11 @@ categoryRoutes.post(
   CategoryController.createCategory,
 );
 
+/**
+ * @desc Get all active categories
+ * @route GET /api/v1/categories
+ * @access Public
+ */
+categoryRoutes.get("/", CategoryController.getAllCategories);
+
 export default categoryRoutes;

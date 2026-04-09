@@ -25,6 +25,23 @@ const createCategory = async (payload: ICategory) => {
   });
 };
 
+/**
+ * @desc Get all active categories
+ * @route GET /api/v1/categories
+ * @access Public
+ */
+const getAllCategories = async () => {
+  return await prisma.category.findMany({
+    where: {
+      isDeleted: false,
+    },
+    orderBy: {
+      createdAt: "desc",
+    },
+  });
+};
+
 export const CategoryService = {
   createCategory,
+  getAllCategories,
 };

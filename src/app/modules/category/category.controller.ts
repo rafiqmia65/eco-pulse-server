@@ -20,6 +20,23 @@ const createCategory = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+/**
+ * @desc Get all active categories
+ * @route GET /api/v1/categories
+ * @access Public
+ */
+const getAllCategories = catchAsync(async (_req: Request, res: Response) => {
+  const result = await CategoryService.getAllCategories();
+
+  sendResponse(res, {
+    httpStatusCode: status.OK,
+    success: true,
+    message: "Categories retrieved successfully",
+    data: result,
+  });
+});
+
 export const CategoryController = {
   createCategory,
+  getAllCategories,
 };
