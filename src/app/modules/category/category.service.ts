@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { prisma } from "../../lib/prisma";
 import status from "http-status";
 import AppError from "../../helpers/errorHelpers/AppError";
@@ -84,9 +85,47 @@ const deleteCategory = async (id: string) => {
   });
 };
 
+/**
+ * @desc Admin: Get all categories with optional status filter
+ * @param status "active" | "deleted" | "all"
+ * @return List of categories based on filter
+ */
+const getAllCategoriesAdmin = async (status?: "active" | "deleted" | "all") => {
+  // Prisma query
+  const whereFilter: any = {};
+
+  if (status === "active") whereFilter.isDeleted = false;
+  else if (status === "deleted") whereFilter.isDeleted = true;
+  // 'all' or undefined → no filter
+
+  return await prisma.category.findMany({
+    where: whereFilter,
+    orderBy: { createdAt: "desc" },
+  });
+};
+
+/**
+ * @desc Admin: Recover a deleted category
+ * @param id Category ID
+ */
+const recoverCategory = async (id: string) => {
+  const category = await prisma.category.findUnique({ where: { id } });
+
+  if (!category || !category.isDeleted) {
+    throw new AppError(status.NOT_FOUND, "Category not found or not deleted");
+  }
+
+  return await prisma.category.update({
+    where: { id },
+    data: { isDeleted: false, deletedAt: null },
+  });
+};
+
 export const CategoryService = {
   createCategory,
   getAllCategories,
   updateCategory,
   deleteCategory,
+  getAllCategoriesAdmin,
+  recoverCategory,
 };

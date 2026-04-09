@@ -52,4 +52,26 @@ categoryRoutes.delete(
   CategoryController.deleteCategory,
 );
 
+/**
+ * @desc Admin: Get all categories (active/deleted/all)
+ * @route GET /api/v1/categories/admin
+ * @access Admin
+ */
+categoryRoutes.get(
+  "/admin",
+  checkAuth(Role.ADMIN),
+  CategoryController.getAllCategoriesAdmin,
+);
+
+/**
+ * @desc Admin: Recover a deleted category
+ * @route PATCH /api/v1/categories/admin/recover/:id
+ * @access Admin
+ */
+categoryRoutes.patch(
+  "/admin/recover/:id",
+  checkAuth(Role.ADMIN),
+  CategoryController.recoverCategory,
+);
+
 export default categoryRoutes;

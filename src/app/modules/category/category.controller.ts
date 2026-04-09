@@ -72,9 +72,53 @@ const deleteCategory = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+/**
+ * @desc Admin: Get all categories with optional status filter
+ * @route GET /api/v1/categories/admin?status=active|deleted|all
+ * @access Admin
+ */
+const getAllCategoriesAdmin = catchAsync(
+  async (req: Request, res: Response) => {
+    const statusFilter = req.query.status as
+      | "active"
+      | "deleted"
+      | "all"
+      | undefined;
+
+    const result = await CategoryService.getAllCategoriesAdmin(statusFilter);
+
+    sendResponse(res, {
+      httpStatusCode: status.OK,
+      success: true,
+      message: "Categories fetched successfully",
+      data: result,
+    });
+  },
+);
+
+/**
+ * @desc Admin: Recover a deleted category
+ * @route PATCH /api/v1/categories/admin/recover/:id
+ * @access Admin
+ */
+const recoverCategory = catchAsync(async (req: Request, res: Response) => {
+  const { id } = req.params;
+
+  const result = await CategoryService.recoverCategory(id as string);
+
+  sendResponse(res, {
+    httpStatusCode: status.OK,
+    success: true,
+    message: "Category recovered successfully",
+    data: result,
+  });
+});
+
 export const CategoryController = {
   createCategory,
   getAllCategories,
   updateCategory,
   deleteCategory,
+  getAllCategoriesAdmin,
+  recoverCategory,
 };
