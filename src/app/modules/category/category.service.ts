@@ -61,8 +61,32 @@ const updateCategory = async (id: string, payload: IUpdateCategory) => {
   });
 };
 
+/**
+ * @desc Soft delete category
+ * @route DELETE /api/v1/categories/:id
+ * @access Admin
+ */
+const deleteCategory = async (id: string) => {
+  const category = await prisma.category.findUnique({
+    where: { id },
+  });
+
+  if (!category || category.isDeleted) {
+    throw new AppError(status.NOT_FOUND, "Category not found");
+  }
+
+  return await prisma.category.update({
+    where: { id },
+    data: {
+      isDeleted: true,
+      deletedAt: new Date(),
+    },
+  });
+};
+
 export const CategoryService = {
   createCategory,
   getAllCategories,
   updateCategory,
+  deleteCategory,
 };

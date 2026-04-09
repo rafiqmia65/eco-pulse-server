@@ -54,8 +54,27 @@ const updateCategory = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+/**
+ * @desc Delete category (soft delete)
+ * @route DELETE /api/v1/categories/:id
+ * @access Admin
+ */
+const deleteCategory = catchAsync(async (req: Request, res: Response) => {
+  const { id } = req.params;
+
+  const result = await CategoryService.deleteCategory(id as string);
+
+  sendResponse(res, {
+    httpStatusCode: status.OK,
+    success: true,
+    message: "Category deleted successfully",
+    data: result,
+  });
+});
+
 export const CategoryController = {
   createCategory,
   getAllCategories,
   updateCategory,
+  deleteCategory,
 };

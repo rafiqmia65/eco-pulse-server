@@ -41,4 +41,15 @@ categoryRoutes.patch(
   CategoryController.updateCategory,
 );
 
+/**
+ * @desc Delete category
+ * @route DELETE /api/v1/categories/:id
+ * @access Admin
+ */
+categoryRoutes.delete(
+  "/:id",
+  checkAuth(Role.ADMIN),
+  CategoryController.deleteCategory,
+);
+
 export default categoryRoutes;
