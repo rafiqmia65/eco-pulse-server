@@ -101,10 +101,30 @@ const getUserById = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+/**
+ * @desc    Get all users with search, filter, pagination
+ * @route   GET /api/v1/users
+ * @access  Admin only
+ */
+const getAllUsers = catchAsync(async (req: Request, res: Response) => {
+  const result = await UserService.getAllUsers(
+    req.query as Record<string, string>,
+  );
+
+  sendResponse(res, {
+    httpStatusCode: status.OK,
+    success: true,
+    message: "Users retrieved successfully",
+    meta: result.meta,
+    data: result.data,
+  });
+});
+
 export const UserController = {
   updateProfile,
   makeAdmin,
   blockUser,
   unblockUser,
   getUserById,
+  getAllUsers,
 };

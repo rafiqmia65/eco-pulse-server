@@ -7,6 +7,6 @@ const indexRoutes: Router = Router();
 // Mount the AuthRoutes under the /auth path
 indexRoutes.use("/auth", AuthRoutes);
 
-indexRoutes.use("/user", UserRoutes);
+indexRoutes.use("/users", UserRoutes);
 
 export default indexRoutes;

@@ -3,6 +3,8 @@ import status from "http-status";
 import AppError from "../../helpers/errorHelpers/AppError";
 import { IUpdateProfilePayload } from "./user.interface";
 import { UserStatus } from "../../../../generated/prisma/enums";
+import { IQueryParams } from "../../interfaces/query.interface";
+import { QueryBuilder } from "../../utils/QueryBuilder";
 
 const updateProfile = async (
   userId: string,
@@ -182,10 +184,30 @@ const getUserById = async (userId: string) => {
   return user;
 };
 
+/**
+ * @desc Get all users with advanced query features
+ */
+const getAllUsers = async (query: IQueryParams) => {
+  const queryBuilder = new QueryBuilder(prisma.user, query, {
+    searchableFields: ["name", "email"], // search
+    filterableFields: ["role", "status"], // filter
+  });
+
+  const result = await queryBuilder
+    .search() // name, email search
+    .filter() // role, status filter
+    .sort() // sorting
+    .paginate() // pagination
+    .execute();
+
+  return result;
+};
+
 export const UserService = {
   updateProfile,
   makeAdmin,
   blockUser,
   unblockUser,
   getUserById,
+  getAllUsers,
 };
