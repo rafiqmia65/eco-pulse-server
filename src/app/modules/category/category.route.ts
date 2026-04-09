@@ -2,7 +2,10 @@ import { Router } from "express";
 import { checkAuth } from "../../middlewares/checkAuth";
 import { Role } from "../../../../generated/prisma/enums";
 import { validateRequest } from "../../middlewares/validateRequest";
-import { createCategorySchema } from "./category.validation";
+import {
+  createCategorySchema,
+  updateCategorySchema,
+} from "./category.validation";
 import { CategoryController } from "./category.controller";
 
 const categoryRoutes: Router = Router();
@@ -25,5 +28,17 @@ categoryRoutes.post(
  * @access Public
  */
 categoryRoutes.get("/", CategoryController.getAllCategories);
+
+/**
+ * @desc Update category
+ * @route PATCH /api/v1/categories/:id
+ * @access Admin
+ */
+categoryRoutes.patch(
+  "/:id",
+  checkAuth(Role.ADMIN),
+  validateRequest(updateCategorySchema),
+  CategoryController.updateCategory,
+);
 
 export default categoryRoutes;

@@ -36,7 +36,26 @@ const getAllCategories = catchAsync(async (_req: Request, res: Response) => {
   });
 });
 
+/**
+ * @desc Update category
+ * @route PATCH /api/v1/categories/:id
+ * @access Admin
+ */
+const updateCategory = catchAsync(async (req: Request, res: Response) => {
+  const { id } = req.params;
+
+  const result = await CategoryService.updateCategory(id as string, req.body);
+
+  sendResponse(res, {
+    httpStatusCode: status.OK,
+    success: true,
+    message: "Category updated successfully",
+    data: result,
+  });
+});
+
 export const CategoryController = {
   createCategory,
   getAllCategories,
+  updateCategory,
 };

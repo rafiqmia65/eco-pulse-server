@@ -1,7 +1,7 @@
 import { prisma } from "../../lib/prisma";
 import status from "http-status";
 import AppError from "../../helpers/errorHelpers/AppError";
-import { ICategory } from "./category.interface";
+import { ICategory, IUpdateCategory } from "./category.interface";
 
 /**
  * @desc Create category
@@ -41,7 +41,28 @@ const getAllCategories = async () => {
   });
 };
 
+/**
+ * @desc Update category
+ */
+const updateCategory = async (id: string, payload: IUpdateCategory) => {
+  const category = await prisma.category.findUnique({
+    where: { id },
+  });
+
+  if (!category || category.isDeleted) {
+    throw new AppError(status.NOT_FOUND, "Category not found");
+  }
+
+  return await prisma.category.update({
+    where: { id },
+    data: {
+      name: payload.name ?? category.name,
+    },
+  });
+};
+
 export const CategoryService = {
   createCategory,
   getAllCategories,
+  updateCategory,
 };
