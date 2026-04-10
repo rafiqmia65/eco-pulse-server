@@ -28,6 +28,17 @@ adminRoutes.patch(
 );
 
 /**
+ * @desc Admin: Reject idea with feedback
+ * @route PATCH /api/v1/admin/ideas/reject/:id
+ * @access Private (Admin)
+ */
+adminRoutes.patch(
+  "/ideas/reject/:id",
+  checkAuth(Role.ADMIN),
+  AdminController.rejectIdea,
+);
+
+/**
  * @desc Get single idea (admin view)
  * @route GET /api/v1/admin/ideas/:id
  * @access Private (Admin)

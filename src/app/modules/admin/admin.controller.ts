@@ -48,6 +48,25 @@ const approveIdea = catchAsync(async (req: Request, res: Response) => {
 });
 
 /**
+ * @desc Admin: Reject idea with feedback
+ * @route PATCH /api/v1/admin/ideas/reject/:id
+ * @access Private (Admin)
+ */
+const rejectIdea = catchAsync(async (req: Request, res: Response) => {
+  const ideaId = req.params.id;
+  const { feedback } = req.body;
+
+  const result = await AdminService.rejectIdea(ideaId as string, feedback);
+
+  sendResponse(res, {
+    httpStatusCode: status.OK,
+    success: true,
+    message: "Idea rejected successfully",
+    data: result,
+  });
+});
+
+/**
  * @desc Get single idea (admin view)
  * @route GET /api/v1/admin/ideas/:id
  * @access Private (Admin)
@@ -74,5 +93,6 @@ const getSingleIdea = catchAsync(async (req: Request, res: Response) => {
 export const AdminController = {
   getSingleIdea,
   getAllIdeasAdmin,
+  rejectIdea,
   approveIdea,
 };

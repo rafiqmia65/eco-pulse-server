@@ -104,6 +104,59 @@ const approveIdea = async (ideaId: string) => {
 };
 
 /**
+ * @desc Admin: Reject idea with feedback
+ * @route PATCH /api/v1/admin/ideas/reject/:id
+ * @access Private (Admin)
+ */
+const rejectIdea = async (ideaId: string, feedback: string) => {
+  if (!feedback) {
+    throw new AppError(400, "Feedback is required");
+  }
+  // Step 1: check idea
+  const idea = await prisma.idea.findUnique({
+    where: { id: ideaId },
+    include: {
+      feedback: true,
+    },
+  });
+
+  if (!idea) {
+    throw new AppError(404, "Idea not found");
+  }
+
+  if (idea.status === IdeaStatus.REJECTED) {
+    throw new AppError(400, "Idea is already rejected");
+  }
+
+  // Step 2: validate status BEFORE update
+  if (idea.status !== IdeaStatus.REVIEW) {
+    throw new AppError(400, "Only REVIEW ideas can be rejected");
+  }
+
+  // Step 3: update idea status
+  const updatedIdea = await prisma.idea.update({
+    where: { id: ideaId },
+    data: {
+      status: IdeaStatus.REJECTED,
+    },
+  });
+
+  // Step 4: save feedback
+  await prisma.feedback.upsert({
+    where: { ideaId },
+    update: {
+      message: feedback,
+    },
+    create: {
+      ideaId,
+      message: feedback,
+    },
+  });
+
+  return updatedIdea;
+};
+
+/**
  * @desc Get single idea (admin view)
  * @route GET /api/v1/admin/ideas/:id
  * @access Private (Admin)
@@ -168,5 +221,6 @@ const getSingleIdea = async (ideaId: string, page: number, limit: number) => {
 export const AdminService = {
   getSingleIdea,
   getAllIdeasAdmin,
+  rejectIdea,
   approveIdea,
 };
