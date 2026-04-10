@@ -1,0 +1,32 @@
+import { Request, Response } from "express";
+import { catchAsync } from "../../shared/catchAsync";
+import { sendResponse } from "../../shared/sendResponse";
+import { AdminService } from "./admin.service";
+
+/**
+ * @desc Get single idea (admin view)
+ * @route GET /api/v1/admin/ideas/:id
+ * @access Private (Admin)
+ */
+const getSingleIdea = catchAsync(async (req: Request, res: Response) => {
+  const ideaId = req.params.id;
+  const page = Number(req.query.page) || 1;
+  const limit = Number(req.query.limit) || 5;
+
+  const result = await AdminService.getSingleIdea(
+    ideaId as string,
+    page,
+    limit,
+  );
+
+  sendResponse(res, {
+    httpStatusCode: 200,
+    success: true,
+    message: "Admin idea fetched successfully",
+    data: result,
+  });
+});
+
+export const AdminController = {
+  getSingleIdea,
+};

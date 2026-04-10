@@ -3,6 +3,7 @@ import AuthRoutes from "../modules/auth/auth.routes";
 import UserRoutes from "../modules/user/user.route";
 import categoryRoutes from "../modules/category/category.route";
 import ideaRoutes from "../modules/idea/idea.route";
+import adminRoutes from "../modules/admin/admin.routes";
 
 const indexRoutes: Router = Router();
 
@@ -17,5 +18,8 @@ indexRoutes.use("/categories", categoryRoutes);
 
 // Mount the ideaRoutes under the /ideas path
 indexRoutes.use("/ideas", ideaRoutes);
+
+// Mount the adminRoutes under the /admin path
+indexRoutes.use("/admin", adminRoutes);
 
 export default indexRoutes;
