@@ -52,13 +52,6 @@ ideaRoutes.patch(
 );
 
 /**
- * @desc Get single idea (by id or slug)
- * @route GET /api/v1/ideas/:identifier
- * @access Public
- */
-ideaRoutes.get("/:identifier", IdeaController.getSingleIdea);
-
-/**
  * @desc Get single idea (owner view)
  * @route GET /api/v1/ideas/me/:id
  * @access Private (Member - only owner)
@@ -67,6 +60,17 @@ ideaRoutes.get(
   "/my-idea/:id",
   checkAuth(Role.MEMBER),
   IdeaController.getMySingleIdea,
+);
+
+/**
+ * @desc Get single idea with access control
+ * @route GET /api/v1/ideas/access/:id
+ * @access Public (with different levels of access based on role and ownership)
+ */
+ideaRoutes.get(
+  "/access/:id",
+  checkAuth(Role.MEMBER, Role.ADMIN), // IMPORTANT
+  IdeaController.getIdeaAccess,
 );
 
 export default ideaRoutes;

@@ -3,8 +3,8 @@ import { catchAsync } from "../../shared/catchAsync";
 import { sendResponse } from "../../shared/sendResponse";
 import status from "http-status";
 import { IdeaService } from "./idea.service";
-import AppError from "../../helpers/errorHelpers/AppError";
 import { IQueryParams } from "../../interfaces/query.interface";
+import { Role } from "../../../../generated/prisma/enums";
 
 /**
  * @desc Member: Create a new Idea
@@ -76,36 +76,6 @@ const updateIdea = catchAsync(async (req: Request, res: Response) => {
 });
 
 /**
- * @desc Get single idea (by id or slug)
- * @route GET /api/v1/ideas/:identifier
- * @access Public
- */
-const getSingleIdea = catchAsync(async (req: Request, res: Response) => {
-  const identifier = req.params.identifier;
-
-  if (!identifier) {
-    throw new AppError(400, "Identifier is required");
-  }
-
-  const page = Number(req.query.page ?? 1);
-  const limit = Number(req.query.limit ?? 5);
-
-  const result = await IdeaService.getSingleIdea(
-    identifier as string,
-    page,
-    limit,
-  );
-
-  sendResponse(res, {
-    httpStatusCode: status.OK,
-    success: true,
-    message: "Idea fetched successfully",
-    data: result,
-    meta: result.commentsMeta,
-  });
-});
-
-/**
  * @desc Get single idea (owner view)
  * @route GET /api/v1/ideas/me/:id
  * @access Private (Member - only owner)
@@ -153,11 +123,35 @@ const getMyIdeas = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+/**
+ * @desc Get single idea with access control
+ * @route GET /api/v1/ideas/access/:id
+ * @access Public (with different levels of access based on role and ownership)
+ */
+const getIdeaAccess = catchAsync(async (req: Request, res: Response) => {
+  const ideaId = req.params.id;
+  const userId = req.user?.userId;
+  const role = req.user?.role as Role;
+
+  const result = await IdeaService.getIdeaAccess(
+    ideaId as string,
+    userId,
+    role,
+  );
+
+  sendResponse(res, {
+    httpStatusCode: status.OK,
+    success: true,
+    message: "Idea access fetched successfully",
+    data: result,
+  });
+});
+
 export const IdeaController = {
   createIdea,
   submitIdea,
   updateIdea,
   getMySingleIdea,
-  getSingleIdea,
   getMyIdeas,
+  getIdeaAccess,
 };

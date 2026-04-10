@@ -1,11 +1,14 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { IdeaStatus } from "../../../../generated/prisma/enums";
+import {
+  IdeaStatus,
+  PaymentStatus,
+  Role,
+} from "../../../../generated/prisma/enums";
 import AppError from "../../helpers/errorHelpers/AppError";
 import { IQueryParams } from "../../interfaces/query.interface";
 import { prisma } from "../../lib/prisma";
 import { QueryBuilder } from "../../utils/QueryBuilder";
 import { IIdea } from "./idea.interface";
-import { validate as isUUID } from "uuid";
 
 /**
  * Create a new Idea
@@ -216,80 +219,6 @@ const updateIdea = async (
 };
 
 /**
- * Get single idea by ID or Slug
- *
- * Rules:
- * - If identifier is UUID → search by id
- * - Else → search by slug
- * - Only APPROVED ideas are public
- */
-
-const getSingleIdea = async (
-  identifier: string,
-  page: number,
-  limit: number,
-) => {
-  // safe identifier check
-  const whereClause = isUUID(identifier)
-    ? { id: identifier }
-    : { slug: identifier };
-
-  // fetch idea
-  const idea = await prisma.idea.findUnique({
-    where: whereClause,
-    include: {
-      author: true,
-      category: true,
-    },
-  });
-
-  if (!idea) {
-    throw new AppError(404, "Idea not found");
-  }
-
-  // only approved visible
-  if (idea.status !== IdeaStatus.APPROVED) {
-    throw new AppError(403, "This idea is not publicly available");
-  }
-
-  // COMMENTS (QueryBuilder integrated)
-  const commentsResult = await new QueryBuilder(
-    prisma.comment,
-    {
-      page: String(page),
-      limit: String(limit),
-      sortBy: "createdAt",
-      sortOrder: "desc",
-    },
-    {
-      searchableFields: ["content"],
-    },
-  )
-    .filter()
-    .paginate()
-    .sort()
-    .where({
-      ideaId: idea.id,
-      parentId: null,
-    })
-    .include({
-      user: true,
-      replies: {
-        include: {
-          user: true,
-        },
-      },
-    })
-    .execute();
-
-  return {
-    ...idea,
-    comments: commentsResult.data,
-    commentsMeta: commentsResult.meta,
-  };
-};
-
-/**
  * @desc Get single idea (owner view)
  * @route GET /api/v1/ideas/me/:id
  * @access Private (Member - only owner)
@@ -395,11 +324,155 @@ const getMyIdeas = async (userId: string, query: IQueryParams) => {
   };
 };
 
+/**
+ * Get single idea by ID
+ * - Access depends on role and ownership
+ * - If idea is APPROVED → public access
+ * - If idea is REVIEW or REJECTED → only owner and admin can access
+ * - If idea is PAID → only users who paid can access full details, others get limited view
+ * - Comments are included for all users who can access the idea (even limited view) for marketing effect
+ * @desc Get single idea (by id or slug)
+ * @route GET /api/v1/ideas/:identifier
+ * @access Public (with different levels of access based on role and ownership)
+ */
+
+const getIdeaAccess = async (
+  ideaId: string,
+  userId?: string,
+  role?: Role,
+  page = 1,
+  limit = 5,
+) => {
+  // 1. Fetch idea (NO payments exposed later)
+  const idea = await prisma.idea.findUnique({
+    where: { id: ideaId },
+    include: {
+      author: true,
+      category: true,
+      payments: {
+        select: {
+          userId: true,
+          status: true,
+        },
+      },
+    },
+  });
+
+  if (!idea) {
+    throw new AppError(404, "Idea not found");
+  }
+
+  // 2. Only APPROVED ideas are public
+  if (idea.status !== IdeaStatus.APPROVED) {
+    throw new AppError(403, "This idea is not publicly available");
+  }
+
+  // 3. Comments (shared for all access levels)
+  const commentsResult = await new QueryBuilder(
+    prisma.comment,
+    {
+      page: String(page),
+      limit: String(limit),
+      sortBy: "createdAt",
+      sortOrder: "desc",
+    },
+    {
+      searchableFields: ["content"],
+    },
+  )
+    .filter()
+    .paginate()
+    .sort()
+    .where({
+      ideaId: idea.id,
+      parentId: null,
+    })
+    .include({
+      user: true,
+      replies: {
+        include: { user: true },
+      },
+    })
+    .execute();
+
+  // 4. ADMIN → FULL ACCESS + message
+  if (role === Role.ADMIN) {
+    return {
+      ...idea,
+      payments: undefined, // hide payment data
+      comments: commentsResult.data,
+      commentsMeta: commentsResult.meta,
+      accessLevel: "ADMIN_FULL_ACCESS",
+      message: "Admin access: full idea visibility granted",
+    };
+  }
+
+  // 5. OWNER → FULL ACCESS + message
+  const isOwner = userId && idea.authorId === userId;
+  if (isOwner) {
+    return {
+      ...idea,
+      payments: undefined,
+      comments: commentsResult.data,
+      commentsMeta: commentsResult.meta,
+      accessLevel: "OWNER_FULL_ACCESS",
+      message: "You are the owner of this idea",
+    };
+  }
+
+  // 6. FREE idea → FULL PUBLIC ACCESS
+  if (!idea.isPaid) {
+    return {
+      ...idea,
+      payments: undefined,
+      comments: commentsResult.data,
+      commentsMeta: commentsResult.meta,
+      accessLevel: "PUBLIC_FREE",
+    };
+  }
+
+  // 7. PAID check (correct enum FIXED)
+  const hasPaid = idea.payments.some(
+    (p) => p.userId === userId && p.status === PaymentStatus.PAID,
+  );
+
+  // 8. NOT PAID → LIMITED VIEW
+  if (!hasPaid) {
+    return {
+      id: idea.id,
+      title: idea.title,
+      description: idea.description,
+      image: idea.image,
+      price: idea.price,
+      isPaid: idea.isPaid,
+      status: idea.status,
+      category: idea.category,
+      author: idea.author,
+
+      comments: commentsResult.data,
+      commentsMeta: commentsResult.meta,
+
+      accessLevel: "LIMITED_PREVIEW",
+      message: "Buy this idea to unlock full content",
+    };
+  }
+
+  // 9. PAID USER → FULL ACCESS
+  return {
+    ...idea,
+    payments: undefined,
+    comments: commentsResult.data,
+    commentsMeta: commentsResult.meta,
+    accessLevel: "PAID_FULL_ACCESS",
+    message: "Payment verified - full access granted",
+  };
+};
+
 export const IdeaService = {
   createIdea,
   submitIdea,
   updateIdea,
-  getSingleIdea,
+  getIdeaAccess,
   getMySingleIdea,
   getMyIdeas,
 };
