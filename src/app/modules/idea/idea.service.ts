@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { IdeaStatus } from "../../../../generated/prisma/enums";
 import AppError from "../../helpers/errorHelpers/AppError";
+import { IQueryParams } from "../../interfaces/query.interface";
 import { prisma } from "../../lib/prisma";
 import { QueryBuilder } from "../../utils/QueryBuilder";
 import { IIdea } from "./idea.interface";
@@ -327,10 +328,78 @@ const getMySingleIdea = async (ideaId: string, userId: string) => {
   return idea;
 };
 
+/**
+ * Get all ideas of logged-in user (Member Dashboard)
+ *
+ * Features:
+ * - Only returns current user's ideas
+ * - Includes all statuses:
+ *   DRAFT, REVIEW, APPROVED, REJECTED
+ * - Supports:
+ *   search (title, description)
+ *   filter (status and category)
+ *   pagination
+ *   sorting
+ */
+
+const getMyIdeas = async (userId: string, query: IQueryParams) => {
+  const queryBuilder = new QueryBuilder(prisma.idea, query, {
+    searchableFields: ["title", "description"],
+    filterableFields: ["status", "categoryId", "isPaid"],
+  });
+
+  const [ideasResult, total, draft, review, approved, rejected] =
+    await Promise.all([
+      queryBuilder
+        .search()
+        .filter()
+        .sort()
+        .paginate()
+        .where({
+          authorId: userId,
+        })
+        .include({
+          category: true,
+        })
+        .execute(),
+
+      prisma.idea.count({ where: { authorId: userId } }),
+
+      prisma.idea.count({
+        where: { authorId: userId, status: IdeaStatus.DRAFT },
+      }),
+
+      prisma.idea.count({
+        where: { authorId: userId, status: IdeaStatus.REVIEW },
+      }),
+
+      prisma.idea.count({
+        where: { authorId: userId, status: IdeaStatus.APPROVED },
+      }),
+
+      prisma.idea.count({
+        where: { authorId: userId, status: IdeaStatus.REJECTED },
+      }),
+    ]);
+
+  return {
+    data: ideasResult.data,
+    meta: ideasResult.meta,
+    counts: {
+      total,
+      draft,
+      review,
+      approved,
+      rejected,
+    },
+  };
+};
+
 export const IdeaService = {
   createIdea,
   submitIdea,
   updateIdea,
   getSingleIdea,
   getMySingleIdea,
+  getMyIdeas,
 };

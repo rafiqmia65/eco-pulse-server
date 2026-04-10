@@ -4,6 +4,7 @@ import { sendResponse } from "../../shared/sendResponse";
 import status from "http-status";
 import { IdeaService } from "./idea.service";
 import AppError from "../../helpers/errorHelpers/AppError";
+import { IQueryParams } from "../../interfaces/query.interface";
 
 /**
  * @desc Member: Create a new Idea
@@ -123,10 +124,40 @@ const getMySingleIdea = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+/**
+ * @desc Get all ideas of logged-in user
+ * @route GET /api/v1/ideas/my-ideas
+ * @access Private (Member)
+ *
+ * Features:
+ * - Search
+ * - Filter (status and category)
+ * - Pagination
+ * - Sorting
+ */
+const getMyIdeas = catchAsync(async (req: Request, res: Response) => {
+  const userId = req.user?.userId as string;
+
+  const result = await IdeaService.getMyIdeas(
+    userId,
+    req.query as IQueryParams,
+  );
+
+  sendResponse(res, {
+    httpStatusCode: status.OK,
+    success: true,
+    message: "My ideas fetched successfully",
+    data: result.data,
+    meta: result.meta,
+    counts: result.counts,
+  });
+});
+
 export const IdeaController = {
   createIdea,
   submitIdea,
   updateIdea,
   getMySingleIdea,
   getSingleIdea,
+  getMyIdeas,
 };

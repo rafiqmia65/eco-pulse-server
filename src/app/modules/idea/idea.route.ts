@@ -20,6 +20,13 @@ ideaRoutes.post(
 );
 
 /**
+ * @desc Get my ideas (member dashboard)
+ * @route GET /api/v1/ideas/my-ideas
+ * @access Private (Member)
+ */
+ideaRoutes.get("/my-ideas", checkAuth(Role.MEMBER), IdeaController.getMyIdeas);
+
+/**
  * @desc Submit draft idea for review
  * @route PATCH /api/v1/ideas/:id/submit
  * @access Private (Member)
@@ -57,7 +64,7 @@ ideaRoutes.get("/:identifier", IdeaController.getSingleIdea);
  * @access Private (Member - only owner)
  */
 ideaRoutes.get(
-  "/me/:id",
+  "/my-idea/:id",
   checkAuth(Role.MEMBER),
   IdeaController.getMySingleIdea,
 );
