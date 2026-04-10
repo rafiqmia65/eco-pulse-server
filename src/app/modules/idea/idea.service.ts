@@ -468,6 +468,37 @@ const getIdeaAccess = async (
   };
 };
 
+/**
+ * Get latest 8 approved ideas for homepage
+ * @desc Get latest 8 approved ideas for homepage
+ * @route GET /api/v1/ideas/latest
+ * @access Public
+ */
+
+const getLatestIdeas = async () => {
+  const ideas = await prisma.idea.findMany({
+    where: {
+      status: IdeaStatus.APPROVED,
+    },
+    orderBy: {
+      createdAt: "desc",
+    },
+    take: 8,
+    include: {
+      author: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+        },
+      },
+      category: true,
+    },
+  });
+
+  return ideas;
+};
+
 export const IdeaService = {
   createIdea,
   submitIdea,
@@ -475,4 +506,5 @@ export const IdeaService = {
   getIdeaAccess,
   getMySingleIdea,
   getMyIdeas,
+  getLatestIdeas,
 };

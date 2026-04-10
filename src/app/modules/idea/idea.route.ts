@@ -73,4 +73,11 @@ ideaRoutes.get(
   IdeaController.getIdeaAccess,
 );
 
+/**
+ * @desc Get latest 8 approved ideas for homepage
+ * @route GET /api/v1/ideas/latest
+ * @access Public
+ */
+ideaRoutes.get("/latest", IdeaController.getLatestIdeas);
+
 export default ideaRoutes;

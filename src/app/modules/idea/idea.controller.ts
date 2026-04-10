@@ -147,6 +147,22 @@ const getIdeaAccess = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+/**
+ * @desc Get latest 8 approved ideas for homepage
+ * @route GET /api/v1/ideas/latest
+ * @access Public
+ */
+const getLatestIdeas = catchAsync(async (req: Request, res: Response) => {
+  const result = await IdeaService.getLatestIdeas();
+
+  sendResponse(res, {
+    httpStatusCode: status.OK,
+    success: true,
+    message: "Latest ideas fetched successfully",
+    data: result,
+  });
+});
+
 export const IdeaController = {
   createIdea,
   submitIdea,
@@ -154,4 +170,5 @@ export const IdeaController = {
   getMySingleIdea,
   getMyIdeas,
   getIdeaAccess,
+  getLatestIdeas,
 };
