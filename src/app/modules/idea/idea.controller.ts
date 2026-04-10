@@ -25,6 +25,27 @@ const createIdea = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+/**
+ * @desc Submit draft idea
+ */
+const submitIdea = catchAsync(async (req: Request, res: Response) => {
+  const ideaId = req.params.id;
+  const userId = req.user?.userId;
+
+  const result = await IdeaService.submitIdea(
+    ideaId as string,
+    userId as string,
+  );
+
+  sendResponse(res, {
+    httpStatusCode: status.OK,
+    success: true,
+    message: "Idea submitted for review successfully",
+    data: result,
+  });
+});
+
 export const IdeaController = {
   createIdea,
+  submitIdea,
 };

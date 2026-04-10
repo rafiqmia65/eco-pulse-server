@@ -19,4 +19,15 @@ ideaRoutes.post(
   IdeaController.createIdea,
 );
 
+/**
+ * @desc Submit draft idea for review
+ * @route PATCH /api/v1/ideas/:id/submit
+ * @access Private (Member)
+ */
+ideaRoutes.patch(
+  "/:id/submit",
+  checkAuth(Role.MEMBER),
+  IdeaController.submitIdea,
+);
+
 export default ideaRoutes;

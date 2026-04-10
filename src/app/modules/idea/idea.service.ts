@@ -72,6 +72,44 @@ const createIdea = async (payload: IIdea, authorId: string) => {
   return idea;
 };
 
+/**
+ * Submit Draft Idea → Review
+ * @desc Member: Submit a draft idea for review
+ * @route PATCH /api/v1/ideas/:id/submit
+ * @access Private (Member)
+ */
+const submitIdea = async (ideaId: string, userId: string) => {
+  // Step 1: Find idea
+  const idea = await prisma.idea.findUnique({
+    where: { id: ideaId },
+  });
+
+  if (!idea) {
+    throw new AppError(404, "Idea not found");
+  }
+
+  // Step 2: Check ownership
+  if (idea.authorId !== userId) {
+    throw new AppError(403, "You are not authorized to submit this idea");
+  }
+
+  // Step 3: Check current status
+  if (idea.status !== IdeaStatus.DRAFT) {
+    throw new AppError(400, "Only draft ideas can be submitted for review");
+  }
+
+  // Step 4: Update status → REVIEW
+  const updatedIdea = await prisma.idea.update({
+    where: { id: ideaId },
+    data: {
+      status: IdeaStatus.REVIEW,
+    },
+  });
+
+  return updatedIdea;
+};
+
 export const IdeaService = {
   createIdea,
+  submitIdea,
 };
