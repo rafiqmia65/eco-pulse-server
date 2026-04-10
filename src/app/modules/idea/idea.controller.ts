@@ -3,6 +3,7 @@ import { catchAsync } from "../../shared/catchAsync";
 import { sendResponse } from "../../shared/sendResponse";
 import status from "http-status";
 import { IdeaService } from "./idea.service";
+import AppError from "../../helpers/errorHelpers/AppError";
 
 /**
  * @desc Member: Create a new Idea
@@ -73,8 +74,39 @@ const updateIdea = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+/**
+ * @desc Get single idea (by id or slug)
+ * @route GET /api/v1/ideas/:identifier
+ * @access Public
+ */
+const getSingleIdea = catchAsync(async (req: Request, res: Response) => {
+  const identifier = req.params.identifier;
+
+  if (!identifier) {
+    throw new AppError(400, "Identifier is required");
+  }
+
+  const page = Number(req.query.page ?? 1);
+  const limit = Number(req.query.limit ?? 5);
+
+  const result = await IdeaService.getSingleIdea(
+    identifier as string,
+    page,
+    limit,
+  );
+
+  sendResponse(res, {
+    httpStatusCode: status.OK,
+    success: true,
+    message: "Idea fetched successfully",
+    data: result,
+    meta: result.commentsMeta,
+  });
+});
+
 export const IdeaController = {
   createIdea,
   submitIdea,
   updateIdea,
+  getSingleIdea,
 };

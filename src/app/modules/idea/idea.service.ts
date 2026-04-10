@@ -2,7 +2,9 @@
 import { IdeaStatus } from "../../../../generated/prisma/enums";
 import AppError from "../../helpers/errorHelpers/AppError";
 import { prisma } from "../../lib/prisma";
+import { QueryBuilder } from "../../utils/QueryBuilder";
 import { IIdea } from "./idea.interface";
+import { validate as isUUID } from "uuid";
 
 /**
  * Create a new Idea
@@ -212,8 +214,83 @@ const updateIdea = async (
   return updatedIdea;
 };
 
+/**
+ * Get single idea by ID or Slug
+ *
+ * Rules:
+ * - If identifier is UUID → search by id
+ * - Else → search by slug
+ * - Only APPROVED ideas are public
+ */
+
+const getSingleIdea = async (
+  identifier: string,
+  page: number,
+  limit: number,
+) => {
+  // safe identifier check
+  const whereClause = isUUID(identifier)
+    ? { id: identifier }
+    : { slug: identifier };
+
+  // fetch idea
+  const idea = await prisma.idea.findUnique({
+    where: whereClause,
+    include: {
+      author: true,
+      category: true,
+    },
+  });
+
+  if (!idea) {
+    throw new AppError(404, "Idea not found");
+  }
+
+  // only approved visible
+  if (idea.status !== IdeaStatus.APPROVED) {
+    throw new AppError(403, "This idea is not publicly available");
+  }
+
+  // COMMENTS (QueryBuilder integrated)
+  const commentsResult = await new QueryBuilder(
+    prisma.comment,
+    {
+      page: String(page),
+      limit: String(limit),
+      sortBy: "createdAt",
+      sortOrder: "desc",
+    },
+    {
+      searchableFields: ["content"],
+    },
+  )
+    .filter()
+    .paginate()
+    .sort()
+    .where({
+      ideaId: idea.id,
+      parentId: null,
+    })
+    .include({
+      user: true,
+      replies: {
+        include: {
+          user: true,
+        },
+      },
+    })
+    .execute();
+
+  return {
+    ...idea,
+    comments: commentsResult.data,
+    commentsMeta: commentsResult.meta,
+  };
+};
+
 export const IdeaService = {
   createIdea,
   submitIdea,
   updateIdea,
+  getSingleIdea,
 };

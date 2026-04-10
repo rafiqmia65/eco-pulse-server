@@ -44,4 +44,11 @@ ideaRoutes.patch(
   IdeaController.updateIdea,
 );
 
+/**
+ * @desc Get single idea (by id or slug)
+ * @route GET /api/v1/ideas/:identifier
+ * @access Public
+ */
+ideaRoutes.get("/:identifier", IdeaController.getSingleIdea);
+
 export default ideaRoutes;
