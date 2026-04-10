@@ -2,6 +2,32 @@ import { Request, Response } from "express";
 import { catchAsync } from "../../shared/catchAsync";
 import { sendResponse } from "../../shared/sendResponse";
 import { AdminService } from "./admin.service";
+import status from "http-status";
+import { IQueryParams } from "../../interfaces/query.interface";
+
+/**
+ * @desc Admin: Get all ideas for moderation
+ * @route GET /api/v1/admin/ideas
+ * @access Private (Admin)
+ *
+ * Features:
+ * - Search
+ * - Filter by status
+ * - Pagination
+ * - Sorting
+ */
+const getAllIdeasAdmin = catchAsync(async (req: Request, res: Response) => {
+  const result = await AdminService.getAllIdeasAdmin(req.query as IQueryParams);
+
+  sendResponse(res, {
+    httpStatusCode: status.OK,
+    success: true,
+    message: "All ideas fetched successfully (Admin)",
+    data: result.data,
+    meta: result.meta,
+    counts: result.counts,
+  });
+});
 
 /**
  * @desc Get single idea (admin view)
@@ -29,4 +55,5 @@ const getSingleIdea = catchAsync(async (req: Request, res: Response) => {
 
 export const AdminController = {
   getSingleIdea,
+  getAllIdeasAdmin,
 };

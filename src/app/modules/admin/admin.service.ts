@@ -1,8 +1,78 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { IdeaStatus } from "../../../../generated/prisma/enums";
 import AppError from "../../helpers/errorHelpers/AppError";
+import { IQueryParams } from "../../interfaces/query.interface";
 import { prisma } from "../../lib/prisma";
 import { QueryBuilder } from "../../utils/QueryBuilder";
+
+/**
+ * Admin: Get all ideas (moderation)
+ *
+ * Features:
+ * - Fetch all ideas
+ * - Filter by status
+ * - Search
+ * - Pagination & sorting
+ * - Include author & category
+ * - Counts for moderation dashboard
+ */
+const getAllIdeasAdmin = async (query: IQueryParams) => {
+  const queryBuilder = new QueryBuilder(prisma.idea, query, {
+    searchableFields: ["title", "description"],
+    filterableFields: ["status", "categoryId", "isPaid"],
+  });
+
+  const baseWhere = {
+    status: {
+      in: [IdeaStatus.REVIEW, IdeaStatus.APPROVED, IdeaStatus.REJECTED],
+    },
+  };
+
+  const result = await queryBuilder
+    .search()
+    .where(baseWhere) 
+    .filter()
+    .sort()
+    .paginate()
+    .include({
+      author: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+        },
+      },
+      category: true,
+    })
+    .execute();
+
+  const [total, review, approved, rejected] = await Promise.all([
+    prisma.idea.count({ where: baseWhere }),
+
+    prisma.idea.count({
+      where: { status: IdeaStatus.REVIEW },
+    }),
+
+    prisma.idea.count({
+      where: { status: IdeaStatus.APPROVED },
+    }),
+
+    prisma.idea.count({
+      where: { status: IdeaStatus.REJECTED },
+    }),
+  ]);
+
+  return {
+    data: result.data,
+    meta: result.meta,
+    counts: {
+      total,
+      review,
+      approved,
+      rejected,
+    },
+  };
+};
 
 /**
  * @desc Get single idea (admin view)
@@ -68,4 +138,5 @@ const getSingleIdea = async (ideaId: string, page: number, limit: number) => {
 
 export const AdminService = {
   getSingleIdea,
+  getAllIdeasAdmin,
 };
