@@ -50,3 +50,16 @@ export const createIdeaSchema = z
       path: ["price"],
     },
   );
+
+export const ideaUpdateSchema = z.object({
+  title: z.string().optional(),
+  problem: z.string().optional(),
+  solution: z.string().optional(),
+  description: z.string().optional(),
+  image: z.string().url().optional(),
+  slug: z.string().nullable().optional(),
+  isPaid: z.boolean().optional(),
+  price: z.number().optional(),
+  categoryId: z.string().optional(),
+  isDraft: z.boolean().optional(),
+});
