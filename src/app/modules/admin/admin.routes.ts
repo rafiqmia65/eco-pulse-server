@@ -17,6 +17,17 @@ adminRoutes.get(
 );
 
 /**
+ * @desc Admin: Approve idea
+ * @route PATCH /api/v1/admin/ideas/approve/:id
+ * @access Private (Admin)
+ */
+adminRoutes.patch(
+  "/ideas/approve/:id",
+  checkAuth(Role.ADMIN),
+  AdminController.approveIdea,
+);
+
+/**
  * @desc Get single idea (admin view)
  * @route GET /api/v1/admin/ideas/:id
  * @access Private (Admin)

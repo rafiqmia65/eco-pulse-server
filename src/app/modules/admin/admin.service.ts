@@ -30,7 +30,7 @@ const getAllIdeasAdmin = async (query: IQueryParams) => {
 
   const result = await queryBuilder
     .search()
-    .where(baseWhere) 
+    .where(baseWhere)
     .filter()
     .sort()
     .paginate()
@@ -72,6 +72,35 @@ const getAllIdeasAdmin = async (query: IQueryParams) => {
       rejected,
     },
   };
+};
+
+/**
+ * @desc Admin: Approve idea
+ * @route PATCH /api/v1/admin/ideas/approve/:id
+ * @access Private (Admin)
+ */
+const approveIdea = async (ideaId: string) => {
+  const idea = await prisma.idea.findUnique({
+    where: { id: ideaId },
+  });
+
+  if (!idea) {
+    throw new AppError(404, "Idea not found");
+  }
+
+  // optional business rule
+  if (idea.status === IdeaStatus.APPROVED) {
+    throw new AppError(400, "Idea is already approved");
+  }
+
+  const updatedIdea = await prisma.idea.update({
+    where: { id: ideaId },
+    data: {
+      status: IdeaStatus.APPROVED,
+    },
+  });
+
+  return updatedIdea;
 };
 
 /**
@@ -139,4 +168,5 @@ const getSingleIdea = async (ideaId: string, page: number, limit: number) => {
 export const AdminService = {
   getSingleIdea,
   getAllIdeasAdmin,
+  approveIdea,
 };
