@@ -163,6 +163,24 @@ const getLatestIdeas = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+/**
+ * @desc Get trending ideas for homepage
+ * @route GET /api/v1/ideas/trending
+ * @access Public
+ *
+ * - Trending = most votes + comments in last 7 days
+ */
+const getTrendingIdeas = catchAsync(async (req: Request, res: Response) => {
+  const result = await IdeaService.getTrendingIdeas();
+
+  sendResponse(res, {
+    httpStatusCode: status.OK,
+    success: true,
+    message: "Trending ideas (last 7 days) fetched successfully",
+    data: result,
+  });
+});
+
 export const IdeaController = {
   createIdea,
   submitIdea,
@@ -171,4 +189,5 @@ export const IdeaController = {
   getMyIdeas,
   getIdeaAccess,
   getLatestIdeas,
+  getTrendingIdeas,
 };

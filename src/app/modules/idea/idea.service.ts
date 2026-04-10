@@ -122,15 +122,7 @@ const submitIdea = async (ideaId: string, userId: string) => {
  * @access Private (Member) - Only for Draft or Rejected ideas
  * - Only the author can update
  * - If idea is in REVIEW or APPROVED status, it cannot be updated
- */
-/**
- * @desc Update idea
- * Rules:
- * - Only author can update
- * - Only DRAFT or REJECTED ideas can be updated
- * - User can:
- *    → save as draft again
- *    → or submit for review
+ * - If isDraft is changed from true to false, status should change from DRAFT to REVIEW
  */
 const updateIdea = async (
   ideaId: string,
@@ -499,6 +491,49 @@ const getLatestIdeas = async () => {
   return ideas;
 };
 
+/**
+ * Get trending ideas for homepage (Bonus)
+ * - Trending = most votes + comments in last 7 days
+ * @desc Get trending ideas for homepage
+ * @route GET /api/v1/ideas/trending
+ * @access Public
+ */
+const getTrendingIdeas = async () => {
+  const sevenDaysAgo = new Date();
+  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+  const ideas = await prisma.idea.findMany({
+    where: {
+      status: IdeaStatus.APPROVED,
+      createdAt: {
+        gte: sevenDaysAgo,
+      },
+    },
+    include: {
+      author: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+        },
+      },
+      category: true,
+    },
+  });
+
+  // calculate engagement score manually
+  const rankedIdeas = ideas
+    .map((idea) => ({
+      ...idea,
+      engagementScore:
+        idea.votesCount * 3 + idea.commentsCount * 2 + idea.watchListCount * 4,
+    }))
+    .sort((a, b) => b.engagementScore - a.engagementScore)
+    .slice(0, 6);
+
+  return rankedIdeas;
+};
+
 export const IdeaService = {
   createIdea,
   submitIdea,
@@ -507,4 +542,5 @@ export const IdeaService = {
   getMySingleIdea,
   getMyIdeas,
   getLatestIdeas,
+  getTrendingIdeas,
 };

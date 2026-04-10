@@ -80,4 +80,11 @@ ideaRoutes.get(
  */
 ideaRoutes.get("/latest", IdeaController.getLatestIdeas);
 
+/**
+ * @desc Get trending ideas (based on votes and comments in last 7 days)
+ * @route GET /api/v1/ideas/trending
+ * @access Public
+ */
+ideaRoutes.get("/trending", IdeaController.getTrendingIdeas);
+
 export default ideaRoutes;
