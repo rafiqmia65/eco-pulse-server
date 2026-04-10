@@ -104,9 +104,29 @@ const getSingleIdea = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+/**
+ * @desc Get single idea (owner view)
+ * @route GET /api/v1/ideas/me/:id
+ * @access Private (Member - only owner)
+ */
+const getMySingleIdea = catchAsync(async (req: Request, res: Response) => {
+  const ideaId = req.params.id;
+  const userId = req.user?.userId as string;
+
+  const result = await IdeaService.getMySingleIdea(ideaId as string, userId);
+
+  sendResponse(res, {
+    httpStatusCode: status.OK,
+    success: true,
+    message: "My idea fetched successfully",
+    data: result,
+  });
+});
+
 export const IdeaController = {
   createIdea,
   submitIdea,
   updateIdea,
+  getMySingleIdea,
   getSingleIdea,
 };

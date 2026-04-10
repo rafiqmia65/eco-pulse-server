@@ -51,4 +51,15 @@ ideaRoutes.patch(
  */
 ideaRoutes.get("/:identifier", IdeaController.getSingleIdea);
 
+/**
+ * @desc Get single idea (owner view)
+ * @route GET /api/v1/ideas/me/:id
+ * @access Private (Member - only owner)
+ */
+ideaRoutes.get(
+  "/me/:id",
+  checkAuth(Role.MEMBER),
+  IdeaController.getMySingleIdea,
+);
+
 export default ideaRoutes;

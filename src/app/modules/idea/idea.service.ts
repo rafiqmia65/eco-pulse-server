@@ -288,9 +288,49 @@ const getSingleIdea = async (
   };
 };
 
+/**
+ * @desc Get single idea (owner view)
+ * @route GET /api/v1/ideas/me/:id
+ * @access Private (Member - only owner)
+ */
+const getMySingleIdea = async (ideaId: string, userId: string) => {
+  const idea = await prisma.idea.findUnique({
+    where: {
+      id: ideaId,
+    },
+    include: {
+      author: true,
+      category: true,
+      votes: true,
+      comments: {
+        include: {
+          user: true,
+          replies: {
+            include: {
+              user: true,
+            },
+          },
+        },
+      },
+    },
+  });
+
+  if (!idea) {
+    throw new AppError(404, "Idea not found");
+  }
+
+  // Only owner can access
+  if (idea.authorId !== userId) {
+    throw new AppError(403, "You are not allowed to view this idea");
+  }
+
+  return idea;
+};
+
 export const IdeaService = {
   createIdea,
   submitIdea,
   updateIdea,
   getSingleIdea,
+  getMySingleIdea,
 };
