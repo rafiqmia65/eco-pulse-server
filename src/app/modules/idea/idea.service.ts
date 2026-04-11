@@ -323,13 +323,12 @@ const updateIdea = async (
  */
 const getMySingleIdea = async (ideaId: string, userId: string) => {
   const idea = await prisma.idea.findUnique({
-    where: {
-      id: ideaId,
-    },
+    where: { id: ideaId },
     include: {
       author: true,
       category: true,
       votes: true,
+      feedback: true, // one-to-one relation
       comments: {
         include: {
           user: true,
@@ -352,7 +351,16 @@ const getMySingleIdea = async (ideaId: string, userId: string) => {
     throw new AppError(403, "You are not allowed to view this idea");
   }
 
-  return idea;
+  // format response
+  return {
+    ...idea,
+    feedback: idea.feedback
+      ? {
+          id: idea.feedback.id,
+          message: idea.feedback.message,
+        }
+      : null,
+  };
 };
 
 /**
