@@ -94,4 +94,11 @@ ideaRoutes.get("/latest", IdeaController.getLatestIdeas);
  */
 ideaRoutes.get("/trending", IdeaController.getTrendingIdeas);
 
+/**
+ * @desc Delete Idea (Only unpublished)
+ * @route DELETE /api/v1/ideas/:id
+ * @access Private (Member - only owner)
+ */
+ideaRoutes.delete("/:id", checkAuth(Role.MEMBER), IdeaController.deleteIdea);
+
 export default ideaRoutes;

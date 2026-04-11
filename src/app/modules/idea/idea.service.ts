@@ -818,6 +818,37 @@ const getTrendingIdeas = async () => {
   return modifiedData;
 };
 
+/**
+ * @desc Delete Idea (Only unpublished)
+ * @route DELETE /api/v1/ideas/:id
+ * @access Private (Member - only owner)
+ */
+const deleteIdea = async (ideaId: string, userId: string) => {
+  const idea = await prisma.idea.findUnique({
+    where: { id: ideaId },
+  });
+
+  if (!idea) {
+    throw new AppError(404, "Idea not found");
+  }
+
+  // only owner
+  if (idea.authorId !== userId) {
+    throw new AppError(403, "You are not allowed to delete this idea");
+  }
+
+  // only NOT approved
+  if (idea.status === IdeaStatus.APPROVED) {
+    throw new AppError(400, "Approved idea cannot be deleted");
+  }
+
+  await prisma.idea.delete({
+    where: { id: ideaId },
+  });
+
+  return null;
+};
+
 export const IdeaService = {
   createIdea,
   getAllIdeas,
@@ -828,4 +859,5 @@ export const IdeaService = {
   getMyIdeas,
   getLatestIdeas,
   getTrendingIdeas,
+  deleteIdea,
 };

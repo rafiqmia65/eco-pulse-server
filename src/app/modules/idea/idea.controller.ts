@@ -203,6 +203,28 @@ const getTrendingIdeas = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+/**
+ * @desc Delete Idea (Only unpublished)
+ * @route DELETE /api/v1/ideas/:id
+ * @access Private (Member - only owner)
+ */
+const deleteIdea = catchAsync(async (req: Request, res: Response) => {
+  const ideaId = req.params.id;
+  const userId = req.user?.userId;
+
+  const result = await IdeaService.deleteIdea(
+    ideaId as string,
+    userId as string,
+  );
+
+  sendResponse(res, {
+    httpStatusCode: status.OK,
+    success: true,
+    message: "Idea deleted successfully",
+    data: result,
+  });
+});
+
 export const IdeaController = {
   createIdea,
   getAllIdeas,
@@ -213,4 +235,5 @@ export const IdeaController = {
   getIdeaAccess,
   getLatestIdeas,
   getTrendingIdeas,
+  deleteIdea,
 };
