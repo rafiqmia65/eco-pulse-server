@@ -423,15 +423,15 @@ const getMyIdeas = async (userId: string, query: IQueryParams) => {
 };
 
 /**
+ * @desc Get single idea by id
+ * @route GET /api/v1/ideas/access/:ideaId
+ * @access Public (with different levels of access based on role and ownership)
  * Get single idea by ID
  * - Access depends on role and ownership
  * - If idea is APPROVED → public access
  * - If idea is REVIEW or REJECTED → only owner and admin can access
  * - If idea is PAID → only users who paid can access full details, others get limited view
- * - Comments are included for all users who can access the idea (even limited view) for marketing effect
- * @desc Get single idea (by id or slug)
- * @route GET /api/v1/ideas/:identifier
- * @access Public (with different levels of access based on role and ownership)
+ * - Comments are included for all users who can access the idea
  */
 
 const getIdeaAccess = async (
@@ -441,7 +441,11 @@ const getIdeaAccess = async (
   page = 1,
   limit = 5,
 ) => {
-  // 1. Fetch idea (NO payments exposed later)
+  // helper: safe truncate
+  const truncate = (text: string, length: number) =>
+    text?.length > length ? text.slice(0, length) + "..." : text;
+
+  // 1. Fetch idea
   const idea = await prisma.idea.findUnique({
     where: { id: ideaId },
     include: {
@@ -493,59 +497,119 @@ const getIdeaAccess = async (
     })
     .execute();
 
-  // 4. ADMIN → FULL ACCESS + message
+  // 4. ADMIN → FULL ACCESS
   if (role === Role.ADMIN) {
     return {
-      ...idea,
-      payments: undefined, // hide payment data
+      id: idea.id,
+      title: idea.title,
+      description: truncate(idea.description, 120),
+
+      solution: idea.solution,
+      isLocked: false,
+
+      image: idea.image,
+      price: idea.price,
+      isPaid: idea.isPaid,
+
+      votesCount: idea.votesCount,
+      commentsCount: idea.commentsCount,
+
+      category: idea.category,
+      author: idea.author,
+      createdAt: idea.createdAt,
+
       comments: commentsResult.data,
       commentsMeta: commentsResult.meta,
+
       accessLevel: "ADMIN_FULL_ACCESS",
       message: "Admin access: full idea visibility granted",
     };
   }
 
-  // 5. OWNER → FULL ACCESS + message
+  // 5. OWNER → FULL ACCESS
   const isOwner = userId && idea.authorId === userId;
   if (isOwner) {
     return {
-      ...idea,
-      payments: undefined,
+      id: idea.id,
+      title: idea.title,
+      description: truncate(idea.description, 120),
+
+      solution: idea.solution,
+      isLocked: false,
+
+      image: idea.image,
+      price: idea.price,
+      isPaid: idea.isPaid,
+
+      votesCount: idea.votesCount,
+      commentsCount: idea.commentsCount,
+
+      category: idea.category,
+      author: idea.author,
+      createdAt: idea.createdAt,
+
       comments: commentsResult.data,
       commentsMeta: commentsResult.meta,
+
       accessLevel: "OWNER_FULL_ACCESS",
       message: "You are the owner of this idea",
     };
   }
 
-  // 6. FREE idea → FULL PUBLIC ACCESS
+  // 6. FREE idea → FULL ACCESS
   if (!idea.isPaid) {
     return {
-      ...idea,
-      payments: undefined,
+      id: idea.id,
+      title: idea.title,
+      description: truncate(idea.description, 120),
+
+      solution: idea.solution,
+      isLocked: false,
+
+      image: idea.image,
+      price: idea.price,
+      isPaid: idea.isPaid,
+
+      votesCount: idea.votesCount,
+      commentsCount: idea.commentsCount,
+
+      category: idea.category,
+      author: idea.author,
+      createdAt: idea.createdAt,
+
       comments: commentsResult.data,
       commentsMeta: commentsResult.meta,
+
       accessLevel: "PUBLIC_FREE",
     };
   }
 
-  // 7. PAID check (correct enum FIXED)
+  // 7. PAID check
   const hasPaid = idea.payments.some(
     (p) => p.userId === userId && p.status === PaymentStatus.PAID,
   );
 
-  // 8. NOT PAID → LIMITED VIEW
+  // 8. NOT PAID → LIMITED VIEW (CONSISTENT WITH TRENDING API)
   if (!hasPaid) {
     return {
       id: idea.id,
       title: idea.title,
-      description: idea.description,
+      description: truncate(idea.description, 120),
+
       image: idea.image,
       price: idea.price,
       isPaid: idea.isPaid,
-      status: idea.status,
+
+      votesCount: idea.votesCount,
+      commentsCount: idea.commentsCount,
+
       category: idea.category,
       author: idea.author,
+      createdAt: idea.createdAt,
+
+      // locked like trending API
+      solution: "Unlock full solution by purchasing this idea",
+      isLocked: true,
 
       comments: commentsResult.data,
       commentsMeta: commentsResult.meta,
@@ -557,10 +621,27 @@ const getIdeaAccess = async (
 
   // 9. PAID USER → FULL ACCESS
   return {
-    ...idea,
-    payments: undefined,
+    id: idea.id,
+    title: idea.title,
+    description: truncate(idea.description, 120),
+
+    solution: idea.solution,
+    isLocked: false,
+
+    image: idea.image,
+    price: idea.price,
+    isPaid: idea.isPaid,
+
+    votesCount: idea.votesCount,
+    commentsCount: idea.commentsCount,
+
+    category: idea.category,
+    author: idea.author,
+    createdAt: idea.createdAt,
+
     comments: commentsResult.data,
     commentsMeta: commentsResult.meta,
+
     accessLevel: "PAID_FULL_ACCESS",
     message: "Payment verified - full access granted",
   };

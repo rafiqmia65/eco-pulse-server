@@ -60,7 +60,7 @@ ideaRoutes.patch(
 
 /**
  * @desc Get single idea (owner view)
- * @route GET /api/v1/ideas/me/:id
+ * @route GET /api/v1/ideas/my-idea/:id
  * @access Private (Member - only owner)
  */
 ideaRoutes.get(
