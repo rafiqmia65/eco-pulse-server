@@ -28,7 +28,12 @@ const addToWatchList = async (userId: string, ideaId: string) => {
     throw new AppError(400, "Only approved ideas can be added to watchList");
   }
 
-  // 3. Prevent duplicate
+  // 3. Prevent owner from adding own idea
+  if (idea.authorId === userId) {
+    throw new AppError(403, "You cannot add your own idea to watchList");
+  }
+
+  // 4. Check duplicate
   const alreadyExists = await prisma.watchList.findUnique({
     where: {
       userId_ideaId: {
@@ -39,10 +44,10 @@ const addToWatchList = async (userId: string, ideaId: string) => {
   });
 
   if (alreadyExists) {
-    throw new AppError(400, "Idea already in watchList");
+    throw new AppError(400, "Idea already in watchlist");
   }
 
-  // 4. TRANSACTION (MAIN PART)
+  // 5. Create watchList (transaction)
   const result = await prisma.$transaction(async (tx) => {
     const watchList = await tx.watchList.create({
       data: {
