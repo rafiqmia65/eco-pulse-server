@@ -4,6 +4,7 @@ import UserRoutes from "../modules/user/user.route";
 import categoryRoutes from "../modules/category/category.route";
 import ideaRoutes from "../modules/idea/idea.route";
 import adminRoutes from "../modules/admin/admin.routes";
+import WatchListRoutes from "../modules/watchList/watchList.router";
 
 const indexRoutes: Router = Router();
 
@@ -21,5 +22,8 @@ indexRoutes.use("/ideas", ideaRoutes);
 
 // Mount the adminRoutes under the /admin path
 indexRoutes.use("/admin", adminRoutes);
+
+// Mount the WatchListRoutes under the /watchList path
+indexRoutes.use("/watchlist", WatchListRoutes);
 
 export default indexRoutes;
