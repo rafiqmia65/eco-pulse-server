@@ -675,9 +675,9 @@ const getTrendingIdeas = async () => {
     },
   });
 
-  // calculate engagement score manually
+  // calculate engagement
   const rankedIdeas = ideas
-    .map((idea) => ({
+    .map((idea: any) => ({
       ...idea,
       engagementScore:
         idea.votesCount * 3 + idea.commentsCount * 2 + idea.watchListCount * 4,
@@ -685,7 +685,56 @@ const getTrendingIdeas = async () => {
     .sort((a, b) => b.engagementScore - a.engagementScore)
     .slice(0, 6);
 
-  return rankedIdeas;
+  // Transform response (same as getAllIdeas)
+  const modifiedData = rankedIdeas.map((idea: any) => {
+    const shortDescription =
+      idea.description?.length > 100
+        ? idea.description.slice(0, 100) + "..."
+        : idea.description;
+
+    // PAID IDEA
+    if (idea.isPaid) {
+      return {
+        id: idea.id,
+        title: idea.title,
+        description: shortDescription,
+        solution: "Unlock full solution by purchasing this idea",
+        isLocked: true,
+        image: idea.image,
+        price: idea.price,
+        isPaid: idea.isPaid,
+        votesCount: idea.votesCount,
+        commentsCount: idea.commentsCount,
+        category: idea.category,
+        author: idea.author,
+        createdAt: idea.createdAt,
+      };
+    }
+
+    // FREE IDEA
+    const shortSolution =
+      idea.solution?.length > 50
+        ? idea.solution.slice(0, 50) + "..."
+        : idea.solution;
+
+    return {
+      id: idea.id,
+      title: idea.title,
+      description: shortDescription,
+      solution: shortSolution,
+      isLocked: false,
+      image: idea.image,
+      price: idea.price,
+      isPaid: idea.isPaid,
+      votesCount: idea.votesCount,
+      commentsCount: idea.commentsCount,
+      category: idea.category,
+      author: idea.author,
+      createdAt: idea.createdAt,
+    };
+  });
+
+  return modifiedData;
 };
 
 export const IdeaService = {
