@@ -572,7 +572,6 @@ const getIdeaAccess = async (
  * @route GET /api/v1/ideas/latest
  * @access Public
  */
-
 const getLatestIdeas = async () => {
   const ideas = await prisma.idea.findMany({
     where: {
@@ -594,7 +593,56 @@ const getLatestIdeas = async () => {
     },
   });
 
-  return ideas;
+  // Transform response (same as getAllIdeas)
+  const modifiedData = ideas.map((idea: any) => {
+    const shortDescription =
+      idea.description?.length > 100
+        ? idea.description.slice(0, 100) + "..."
+        : idea.description;
+
+    // PAID IDEA
+    if (idea.isPaid) {
+      return {
+        id: idea.id,
+        title: idea.title,
+        description: shortDescription,
+        solution: "Unlock full solution by purchasing this idea",
+        isLocked: true,
+        image: idea.image,
+        price: idea.price,
+        isPaid: idea.isPaid,
+        votesCount: idea.votesCount,
+        commentsCount: idea.commentsCount,
+        category: idea.category,
+        author: idea.author,
+        createdAt: idea.createdAt,
+      };
+    }
+
+    // FREE IDEA
+    const shortSolution =
+      idea.solution?.length > 50
+        ? idea.solution.slice(0, 50) + "..."
+        : idea.solution;
+
+    return {
+      id: idea.id,
+      title: idea.title,
+      description: shortDescription,
+      solution: shortSolution,
+      isLocked: false,
+      image: idea.image,
+      price: idea.price,
+      isPaid: idea.isPaid,
+      votesCount: idea.votesCount,
+      commentsCount: idea.commentsCount,
+      category: idea.category,
+      author: idea.author,
+      createdAt: idea.createdAt,
+    };
+  });
+
+  return modifiedData;
 };
 
 /**
