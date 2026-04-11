@@ -27,4 +27,15 @@ WatchListRoutes.get(
   WatchListController.getMyWatchList,
 );
 
+/**
+ * @desc Remove idea from watchList
+ * @route DELETE /api/v1/watchlist/:id
+ * @access Private (Member)
+ */
+WatchListRoutes.delete(
+  "/:id",
+  checkAuth(Role.MEMBER),
+  WatchListController.removeFromWatchList,
+);
+
 export default WatchListRoutes;

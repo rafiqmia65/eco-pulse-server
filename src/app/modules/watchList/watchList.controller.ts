@@ -59,7 +59,21 @@ const getMyWatchList = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+const removeFromWatchList = catchAsync(async (req: Request, res: Response) => {
+  const userId = req.user?.userId as string;
+  const ideaId = req.params.id;
+
+  await WatchListService.removeFromWatchList(userId, ideaId as string);
+
+  sendResponse(res, {
+    httpStatusCode: status.OK,
+    success: true,
+    message: "Idea removed from watchList successfully",
+  });
+});
+
 export const WatchListController = {
   addToWatchList,
   getMyWatchList,
+  removeFromWatchList,
 };

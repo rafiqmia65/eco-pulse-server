@@ -228,7 +228,57 @@ const getMyWatchList = async (userId: string, query: IQueryParams) => {
   };
 };
 
+/**
+ * @desc Remove idea from watchList
+ * @route DELETE /api/v1/watchlist/:id
+ * @access Private (Member)
+ * Steps:
+1. Check watchList entry exists for this user and idea
+2. If not exists, throw 404
+3. If exists, delete the watchList entry and decrement idea's watchListCount (transaction)
+4. Return success response
+ */
+const removeFromWatchList = async (userId: string, ideaId: string) => {
+  // 1. check watchList entry exists
+  const watchItem = await prisma.watchList.findUnique({
+    where: {
+      userId_ideaId: {
+        userId,
+        ideaId,
+      },
+    },
+  });
+
+  if (!watchItem) {
+    throw new AppError(404, "WatchList item not found");
+  }
+
+  // 2. transaction delete + decrement count
+  await prisma.$transaction(async (tx) => {
+    await tx.watchList.delete({
+      where: {
+        userId_ideaId: {
+          userId,
+          ideaId,
+        },
+      },
+    });
+
+    await tx.idea.update({
+      where: { id: ideaId },
+      data: {
+        watchListCount: {
+          decrement: 1,
+        },
+      },
+    });
+  });
+
+  return null;
+};
+
 export const WatchListService = {
   addToWatchList,
   getMyWatchList,
+  removeFromWatchList,
 };
