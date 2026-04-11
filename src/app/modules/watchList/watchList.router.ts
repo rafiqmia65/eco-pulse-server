@@ -16,4 +16,15 @@ WatchListRoutes.post(
   WatchListController.addToWatchList,
 );
 
+/**
+ * @desc Get my watchlist
+ * @route GET /api/v1/watchlist
+ * @access Private (Member)
+ */
+WatchListRoutes.get(
+  "/",
+  checkAuth(Role.MEMBER),
+  WatchListController.getMyWatchList,
+);
+
 export default WatchListRoutes;
