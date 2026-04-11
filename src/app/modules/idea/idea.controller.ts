@@ -28,6 +28,28 @@ const createIdea = catchAsync(async (req: Request, res: Response) => {
 });
 
 /**
+ * @desc Get all ideas (public listing)
+ * @route GET /api/v1/ideas
+ * @access Public
+ * Features:
+ * - Search by title and description
+ * - Filter by status, category, author, date range
+ * - Pagination
+ * - Sorting by newest, most voted, etc.
+ */
+const getAllIdeas = catchAsync(async (req: Request, res: Response) => {
+  const result = await IdeaService.getAllIdeas(req.query as IQueryParams);
+
+  sendResponse(res, {
+    httpStatusCode: status.OK,
+    success: true,
+    message: "Ideas fetched successfully",
+    data: result.data,
+    meta: result.meta,
+  });
+});
+
+/**
  * @desc Submit draft idea
  * @route PATCH /api/v1/ideas/:id/submit
  * @access Private (Member)
@@ -183,6 +205,7 @@ const getTrendingIdeas = catchAsync(async (req: Request, res: Response) => {
 
 export const IdeaController = {
   createIdea,
+  getAllIdeas,
   submitIdea,
   updateIdea,
   getMySingleIdea,

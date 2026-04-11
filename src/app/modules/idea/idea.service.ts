@@ -80,6 +80,112 @@ const createIdea = async (payload: IIdea, authorId: string) => {
 };
 
 /**
+ * Get all ideas with:
+ * - pagination
+ * - search
+ * - filter (category, isPaid, author, votes range)
+ * - sorting (latest, top voted, most commented)
+ * - ONLY APPROVED ideas
+ * - PAID idea → limited data
+ */
+const getAllIdeas = async (query: IQueryParams) => {
+  // 1. Initialize QueryBuilder
+  const qb = new QueryBuilder(prisma.idea, query, {
+    searchableFields: ["title", "description", "problem", "solution"],
+    filterableFields: [
+      "categoryId",
+      "isPaid",
+      "authorId",
+      "votesCount",
+      "commentsCount",
+    ],
+  });
+
+  // 2. Sorting Mapping
+  const sortMap: Record<string, any> = {
+    latest: { createdAt: "desc" },
+    oldest: { createdAt: "asc" },
+    top_voted: { votesCount: "desc" },
+    most_commented: { commentsCount: "desc" },
+  };
+
+  const sortBy = query.sortBy || "latest";
+
+  // 3. Build Query
+  qb.search()
+    .filter()
+    .paginate()
+    .where({
+      status: IdeaStatus.APPROVED,
+    })
+    .include({
+      author: true,
+      category: true,
+    });
+
+  // override sorting
+  (qb as any).query.orderBy = sortMap[sortBy] || { createdAt: "desc" };
+
+  // 4. Execute
+  const result = await qb.execute();
+
+  // 5. Modify response 🔥
+  const modifiedData = result.data.map((idea: any) => {
+    // Safe description truncate
+    const shortDescription =
+      idea.description?.length > 100
+        ? idea.description.slice(0, 100) + "..."
+        : idea.description;
+
+    // PAID IDEA
+    if (idea.isPaid) {
+      return {
+        id: idea.id,
+        title: idea.title,
+        description: shortDescription,
+        solution: "Unlock full solution by purchasing this idea",
+        isLocked: true,
+        image: idea.image,
+        price: idea.price,
+        isPaid: idea.isPaid,
+        votesCount: idea.votesCount,
+        commentsCount: idea.commentsCount,
+        category: idea.category,
+        author: idea.author,
+        createdAt: idea.createdAt,
+      };
+    }
+
+    // FREE IDEA
+    const shortSolution =
+      idea.solution?.length > 50
+        ? idea.solution.slice(0, 50) + "..."
+        : idea.solution;
+
+    return {
+      id: idea.id,
+      title: idea.title,
+      description: shortDescription,
+      solution: shortSolution,
+      isLocked: false,
+      image: idea.image,
+      price: idea.price,
+      isPaid: idea.isPaid,
+      votesCount: idea.votesCount,
+      commentsCount: idea.commentsCount,
+      category: idea.category,
+      author: idea.author,
+      createdAt: idea.createdAt,
+    };
+  });
+
+  return {
+    data: modifiedData,
+    meta: result.meta,
+  };
+};
+
+/**
  * Submit Draft Idea → Review
  * @desc Member: Submit a draft idea for review
  * @route PATCH /api/v1/ideas/:id/submit
@@ -536,6 +642,7 @@ const getTrendingIdeas = async () => {
 
 export const IdeaService = {
   createIdea,
+  getAllIdeas,
   submitIdea,
   updateIdea,
   getIdeaAccess,

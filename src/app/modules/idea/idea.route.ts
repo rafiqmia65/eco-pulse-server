@@ -20,6 +20,13 @@ ideaRoutes.post(
 );
 
 /**
+ * @desc Get all approved ideas with advanced filtering, search, sorting & pagination
+ * @route GET /api/v1/ideas
+ * @access Public
+ */
+ideaRoutes.get("/", IdeaController.getAllIdeas);
+
+/**
  * @desc Get my ideas (member dashboard)
  * @route GET /api/v1/ideas/my-ideas
  * @access Private (Member)
