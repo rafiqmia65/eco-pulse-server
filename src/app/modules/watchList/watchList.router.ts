@@ -6,14 +6,14 @@ import { Role } from "../../../../generated/prisma/enums";
 const WatchListRoutes: Router = Router();
 
 /**
- * @desc Add idea to watchList
- * @route POST /api/v1/watchList/:id
+ * @desc Toggle idea in watchList (add/remove)
+ * @route POST /api/v1/watchlist/toggle/:id
  * @access Private (Member)
  */
 WatchListRoutes.post(
-  "/:id",
+  "/toggle/:id",
   checkAuth(Role.MEMBER),
-  WatchListController.addToWatchList,
+  WatchListController.toggleWatchList,
 );
 
 /**
@@ -25,17 +25,6 @@ WatchListRoutes.get(
   "/",
   checkAuth(Role.MEMBER),
   WatchListController.getMyWatchList,
-);
-
-/**
- * @desc Remove idea from watchList
- * @route DELETE /api/v1/watchlist/:id
- * @access Private (Member)
- */
-WatchListRoutes.delete(
-  "/:id",
-  checkAuth(Role.MEMBER),
-  WatchListController.removeFromWatchList,
 );
 
 export default WatchListRoutes;

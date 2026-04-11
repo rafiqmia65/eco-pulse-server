@@ -5,30 +5,31 @@ import status from "http-status";
 import { WatchListService } from "./watchList.service";
 import { IQueryParams } from "../../interfaces/query.interface";
 
-/*
-*@desc Add idea to watchList
-* @route POST /api/v1/watchList/:id
+/*@desc Toggle idea in watchList (add/remove)
+* @route POST /api/v1/watchList/toggle/:id 
 * @access Private (Member)
-*
-*Steps:
+* Steps:
 1. Get userId from req.user
 2. Get ideaId from req.params
-3. Call service layer to add to watchList
-4. Send response
+3. Call service layer to toggle watchList
+4. Send response with action (added/removed) and isInWatchList boolean
 */
-const addToWatchList = catchAsync(async (req: Request, res: Response) => {
+const toggleWatchList = catchAsync(async (req: Request, res: Response) => {
   const userId = req.user?.userId as string;
   const ideaId = req.params.id;
 
-  const result = await WatchListService.addToWatchList(
+  const result = await WatchListService.toggleWatchList(
     userId,
     ideaId as string,
   );
 
   sendResponse(res, {
-    httpStatusCode: status.CREATED,
+    httpStatusCode: status.OK,
     success: true,
-    message: "Idea added to watchList successfully",
+    message:
+      result.action === "added"
+        ? "Idea added to watchList"
+        : "Idea removed from watchList",
     data: result,
   });
 });
@@ -59,21 +60,7 @@ const getMyWatchList = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
-const removeFromWatchList = catchAsync(async (req: Request, res: Response) => {
-  const userId = req.user?.userId as string;
-  const ideaId = req.params.id;
-
-  await WatchListService.removeFromWatchList(userId, ideaId as string);
-
-  sendResponse(res, {
-    httpStatusCode: status.OK,
-    success: true,
-    message: "Idea removed from watchList successfully",
-  });
-});
-
 export const WatchListController = {
-  addToWatchList,
+  toggleWatchList,
   getMyWatchList,
-  removeFromWatchList,
 };
