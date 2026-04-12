@@ -25,7 +25,10 @@ model Idea {
 
     feedback Feedback?
 
-    votesCount     Int @default(0)
+    // UPDATED COUNTS
+    upvotesCount   Int @default(0)
+    downvotesCount Int @default(0)
+    votesCount     Int @default(0) // net score (up - down)
     commentsCount  Int @default(0)
     watchListCount Int @default(0)
 

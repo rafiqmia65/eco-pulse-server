@@ -5,6 +5,7 @@ import categoryRoutes from "../modules/category/category.route";
 import ideaRoutes from "../modules/idea/idea.route";
 import adminRoutes from "../modules/admin/admin.routes";
 import WatchListRoutes from "../modules/watchList/watchList.router";
+import VoteRoutes from "../modules/vote/vote.route";
 
 const indexRoutes: Router = Router();
 
@@ -25,5 +26,8 @@ indexRoutes.use("/admin", adminRoutes);
 
 // Mount the WatchListRoutes under the /watchList path
 indexRoutes.use("/watchlist", WatchListRoutes);
+
+// Mount the VoteRoutes under the /votes path
+indexRoutes.use("/votes", VoteRoutes);
 
 export default indexRoutes;
