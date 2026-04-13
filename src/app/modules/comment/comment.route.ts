@@ -2,7 +2,7 @@ import { Router } from "express";
 import { checkAuth } from "../../middlewares/checkAuth";
 import { Role } from "../../../../generated/prisma/enums";
 import { validateRequest } from "../../middlewares/validateRequest";
-import { createCommentSchema } from "./comment.validation";
+import { createCommentSchema, updateCommentSchema } from "./comment.validation";
 import { CommentController } from "./comment.controller";
 
 const CommentRoutes: Router = Router();
@@ -21,12 +21,12 @@ CommentRoutes.post(
 
 // CommentRoutes.get("/:ideaId", CommentController.getComments);
 
-// CommentRoutes.patch(
-//   "/:commentId",
-//   checkAuth(Role.MEMBER, Role.ADMIN),
-//   validateRequest(updateCommentSchema),
-//   CommentController.updateComment,
-// );
+CommentRoutes.patch(
+  "/:commentId",
+  checkAuth(Role.MEMBER, Role.ADMIN),
+  validateRequest(updateCommentSchema),
+  CommentController.updateComment,
+);
 
 // CommentRoutes.delete(
 //   "/:commentId",

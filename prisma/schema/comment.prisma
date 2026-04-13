@@ -9,7 +9,7 @@ model Comment {
     user User @relation(fields: [userId], references: [id])
     idea Idea @relation(fields: [ideaId], references: [id])
 
-    parent  Comment?  @relation("CommentReplies", fields: [parentId], references: [id])
+    parent  Comment?  @relation("CommentReplies", fields: [parentId], references: [id], onDelete: SetNull)
     replies Comment[] @relation("CommentReplies")
 
     isDeleted Boolean  @default(false)
@@ -18,4 +18,5 @@ model Comment {
 
     @@index([ideaId])
     @@index([userId])
+    @@index([parentId])
 }

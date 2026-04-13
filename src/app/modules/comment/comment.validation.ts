@@ -10,10 +10,8 @@ export const createCommentSchema = z.object({
 });
 
 export const updateCommentSchema = z.object({
-  body: z.object({
-    content: z
-      .string()
-      .min(1, "Comment cannot be empty")
-      .max(1000, "Comment too long"),
-  }),
+  content: z
+    .string()
+    .min(1, "Comment cannot be empty")
+    .max(1000, "Comment too long"),
 });

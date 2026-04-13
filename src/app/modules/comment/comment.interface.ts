@@ -7,3 +7,10 @@ export interface ICreateCommentPayload {
   content: string;
   parentId?: string;
 }
+
+export interface IUpdateCommentPayload {
+  userId: string;
+  userRole: Role;
+  commentId: string;
+  content: string;
+}
