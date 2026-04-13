@@ -199,7 +199,7 @@ const getSingleIdea = async (ideaId: string, page: number, limit: number) => {
     .where({
       ideaId: idea.id,
       parentId: null,
-      isDeleted: false,
+      // isDeleted filter remove
     })
     .include({
       user: true,

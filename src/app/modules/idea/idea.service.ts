@@ -401,7 +401,6 @@ const getMySingleIdea = async (
     .where({
       ideaId: idea.id,
       parentId: null,
-      isDeleted: false,
     })
     .include({
       user: true,
@@ -558,7 +557,6 @@ export const getIdeaAccess = async (
     .where({
       ideaId: idea.id,
       parentId: null,
-      isDeleted: false,
     })
     .include({
       user: true,
