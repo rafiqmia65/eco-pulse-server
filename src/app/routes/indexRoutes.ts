@@ -6,6 +6,7 @@ import ideaRoutes from "../modules/idea/idea.route";
 import adminRoutes from "../modules/admin/admin.routes";
 import WatchListRoutes from "../modules/watchList/watchList.router";
 import VoteRoutes from "../modules/vote/vote.route";
+import CommentRoutes from "../modules/comment/comment.route";
 
 const indexRoutes: Router = Router();
 
@@ -29,5 +30,8 @@ indexRoutes.use("/watchlist", WatchListRoutes);
 
 // Mount the VoteRoutes under the /votes path
 indexRoutes.use("/votes", VoteRoutes);
+
+// Mount the CommentRoutes under the /comments path
+indexRoutes.use("/comments", CommentRoutes);
 
 export default indexRoutes;
