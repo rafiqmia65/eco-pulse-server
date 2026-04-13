@@ -1,13 +1,14 @@
 model Vote {
-    id String @id @default(uuid())
-
+    id     String @id @default(uuid())
     userId String
     ideaId String
-
-    value Int // constrain in backend: only 1 or -1
+    value  Int
 
     user User @relation(fields: [userId], references: [id])
     idea Idea @relation(fields: [ideaId], references: [id])
 
-    @@unique([userId, ideaId]) // one vote per user
+    createdAt DateTime @default(now())
+    updatedAt DateTime @default(now()) @updatedAt
+
+    @@unique([userId, ideaId])
 }

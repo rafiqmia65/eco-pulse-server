@@ -6,7 +6,19 @@ import {
   PaymentStatus,
   Role,
 } from "../../../../generated/prisma/enums";
+import { QueryBuilder } from "../../utils/QueryBuilder";
+import { IQueryParams } from "../../interfaces/query.interface";
 
+/* 
+ *@desc Toggle vote (upvote/downvote) for an idea
+ * @route POST /api/v1/votes/:ideaId
+ * @access Private (Member)
+ * Steps:
+ 1. Get userId from req.user
+    2. Get ideaId from req.params
+    3. Call service layer to toggle vote
+    4. Send response with action (upvoted/downvoted/removed) and current vote counts
+ */
 const toggleVote = async (
   userId: string,
   ideaId: string,
@@ -130,6 +142,94 @@ const toggleVote = async (
   };
 };
 
+/**@desc Get my voted ideas
+* @route GET /api/v1/votes/my-ideas
+* @access Private (Member)
+* Steps:
+1. Get userId from req.user
+2. Call service layer to get voted ideas with pagination
+3. Send response with data and meta
+*/
+const getMyVotedIdeas = async (userId: string, query: IQueryParams) => {
+  // ==============================
+  // QUERY BUILDER INIT
+  // ==============================
+  const queryBuilder = new QueryBuilder(prisma.vote, query, {
+    searchableFields: ["idea.title"],
+    filterableFields: ["idea.categoryId"],
+  });
+
+  // ==============================
+  // MAIN DATA QUERY
+  // ==============================
+  const result = await queryBuilder
+    .search() // search
+    .filter() // filter
+    .paginate() // pagination
+    .sort() // sorting
+    .include({
+      idea: {
+        include: {
+          author: true,
+          category: true,
+        },
+      },
+    })
+    .where({
+      userId, // logged user filter
+    })
+    .execute();
+
+  // ==============================
+  // DASHBOARD STATS
+  // ==============================
+
+  // group by vote type
+  const stats = await prisma.vote.groupBy({
+    by: ["value"],
+    where: { userId },
+    _count: true,
+  });
+
+  const upvotes = stats.find((s) => s.value === 1)?._count || 0;
+  const downvotes = stats.find((s) => s.value === -1)?._count || 0;
+
+  // additional stats
+  const totalVotes = upvotes + downvotes;
+
+  // last 7 days votes (trend useful)
+  const last7DaysVotes = await prisma.vote.count({
+    where: {
+      userId,
+      createdAt: {
+        gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
+      },
+    },
+  });
+
+  // unique ideas voted
+  const uniqueIdeas = await prisma.vote.findMany({
+    where: { userId },
+    select: { ideaId: true },
+    distinct: ["ideaId"],
+  });
+
+  return {
+    data: result.data,
+    meta: result.meta,
+
+    // dashboard counts
+    counts: {
+      upvotes,
+      downvotes,
+      totalVotes,
+      last7DaysVotes,
+      totalIdeasVoted: uniqueIdeas.length,
+    },
+  };
+};
+
 export const VoteService = {
   toggleVote,
+  getMyVotedIdeas,
 };
