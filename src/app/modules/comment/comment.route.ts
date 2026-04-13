@@ -19,8 +19,11 @@ CommentRoutes.post(
   CommentController.createComment,
 );
 
-// CommentRoutes.get("/:ideaId", CommentController.getComments);
-
+/*
+ * @desc Update my comment
+ * @route PUT /api/v1/comments/:commentId
+ * @access Private (Member, Admin)
+ */
 CommentRoutes.patch(
   "/:commentId",
   checkAuth(Role.MEMBER, Role.ADMIN),
@@ -28,10 +31,15 @@ CommentRoutes.patch(
   CommentController.updateComment,
 );
 
-// CommentRoutes.delete(
-//   "/:commentId",
-//   checkAuth(Role.MEMBER, Role.ADMIN),
-//   CommentController.deleteComment,
-// );
+/*
+ * @desc Delete my comment
+ * @route DELETE /api/v1/comments/:commentId
+ * @access Private (Member, Admin)
+ */
+CommentRoutes.delete(
+  "/:commentId",
+  checkAuth(Role.MEMBER, Role.ADMIN),
+  CommentController.deleteComment,
+);
 
 export default CommentRoutes;
