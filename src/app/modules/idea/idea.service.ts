@@ -660,8 +660,10 @@ const getIdeaAccess = async (
  * @desc Get latest 8 approved ideas for homepage
  * @route GET /api/v1/ideas/latest
  * @access Public
+ * @param userId (optional) - for current user vote
  */
-const getLatestIdeas = async () => {
+
+const getLatestIdeas = async (userId?: string) => {
   const ideas = await prisma.idea.findMany({
     where: {
       status: IdeaStatus.APPROVED,
@@ -679,17 +681,40 @@ const getLatestIdeas = async () => {
         },
       },
       category: true,
+      votes: true,
     },
   });
 
-  // Transform response (same as getAllIdeas)
   const modifiedData = ideas.map((idea: any) => {
+    // -----------------------------
+    // 1. SHORT DESCRIPTION
+    // -----------------------------
     const shortDescription =
       idea.description?.length > 100
         ? idea.description.slice(0, 100) + "..."
         : idea.description;
 
-    // PAID IDEA
+    // -----------------------------
+    // 2. CURRENT USER VOTE
+    // -----------------------------
+    let currentUserVote: number | null = null;
+
+    if (userId) {
+      const vote = idea.votes.find((v: any) => v.userId === userId);
+      currentUserVote = vote ? vote.value : null;
+    }
+
+    // -----------------------------
+    // 3. VOTE CALCULATION
+    // -----------------------------
+    const upvotes = idea.votes.filter((v: any) => v.value === 1).length;
+    const downvotes = idea.votes.filter((v: any) => v.value === -1).length;
+
+    const votesCount = upvotes - downvotes; // net score
+
+    // -----------------------------
+    // 4. PAID IDEA HANDLING
+    // -----------------------------
     if (idea.isPaid) {
       return {
         id: idea.id,
@@ -700,7 +725,12 @@ const getLatestIdeas = async () => {
         image: idea.image,
         price: idea.price,
         isPaid: idea.isPaid,
-        votesCount: idea.votesCount,
+
+        upvotes,
+        downvotes,
+        votesCount,
+        currentUserVote,
+
         commentsCount: idea.commentsCount,
         category: idea.category,
         author: idea.author,
@@ -708,7 +738,9 @@ const getLatestIdeas = async () => {
       };
     }
 
-    // FREE IDEA
+    // -----------------------------
+    // 5. FREE IDEA HANDLING
+    // -----------------------------
     const shortSolution =
       idea.solution?.length > 50
         ? idea.solution.slice(0, 50) + "..."
@@ -723,7 +755,12 @@ const getLatestIdeas = async () => {
       image: idea.image,
       price: idea.price,
       isPaid: idea.isPaid,
-      votesCount: idea.votesCount,
+
+      upvotes,
+      downvotes,
+      votesCount,
+      currentUserVote,
+
       commentsCount: idea.commentsCount,
       category: idea.category,
       author: idea.author,

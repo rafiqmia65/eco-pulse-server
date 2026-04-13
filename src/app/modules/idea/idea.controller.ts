@@ -172,10 +172,13 @@ const getIdeaAccess = catchAsync(async (req: Request, res: Response) => {
 /**
  * @desc Get latest 8 approved ideas for homepage
  * @route GET /api/v1/ideas/latest
- * @access Public
+ * @access Public (user optional)
  */
 const getLatestIdeas = catchAsync(async (req: Request, res: Response) => {
-  const result = await IdeaService.getLatestIdeas();
+  // user optional (not logged in users will see the same latest ideas, but we can use userId to personalize if needed)
+  const userId = req.user?.userId;
+
+  const result = await IdeaService.getLatestIdeas(userId);
 
   sendResponse(res, {
     httpStatusCode: status.OK,
