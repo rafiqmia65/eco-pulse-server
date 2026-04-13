@@ -168,15 +168,61 @@ const deleteComment = async (
     where: { id: commentId },
     data: {
       isDeleted: true,
-      content: "This comment has been deleted",
     },
   });
 
   return deleted;
 };
 
+/*
+ * ============================================
+ * RESTORE COMMENT
+ * ============================================
+ * Rules:
+ * - Only owner or admin can restore
+ * - Only deleted comments can be restored
+ */
+const restoreComment = async (
+  userId: string,
+  userRole: Role,
+  commentId: string,
+) => {
+  // 1️ Check if comment exists
+  const comment = await prisma.comment.findUnique({
+    where: { id: commentId },
+  });
+
+  if (!comment) {
+    throw new AppError(404, "Comment not found");
+  }
+
+  // 2️ Check if already active
+  if (!comment.isDeleted) {
+    throw new AppError(400, "Comment is not deleted");
+  }
+
+  // 3️ Permission check
+  const isOwner = comment.userId === userId;
+  const isAdmin = userRole === Role.ADMIN;
+
+  if (!isOwner && !isAdmin) {
+    throw new AppError(403, "Not allowed to restore this comment");
+  }
+
+  // 4️ Restore
+  const restored = await prisma.comment.update({
+    where: { id: commentId },
+    data: {
+      isDeleted: false,
+    },
+  });
+
+  return restored;
+};
+
 export const CommentService = {
   createComment,
   updateComment,
   deleteComment,
+  restoreComment,
 };

@@ -42,4 +42,15 @@ CommentRoutes.delete(
   CommentController.deleteComment,
 );
 
+/**
+ * @desc Restore a deleted comment
+ * @route PATCH /api/v1/comments/restore/:commentId
+ * @access Private (Member, Admin)
+ */
+CommentRoutes.patch(
+  "/restore/:commentId",
+  checkAuth(Role.MEMBER, Role.ADMIN),
+  CommentController.restoreComment,
+);
+
 export default CommentRoutes;

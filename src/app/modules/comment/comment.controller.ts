@@ -120,8 +120,39 @@ const deleteComment = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+/**
+ * @desc    Restore a deleted comment
+ * @route   PATCH /api/v1/comments/:commentId/restore
+ * @access  Private (Member, Admin)
+ *
+ * Rules:
+ * - Owner can restore their own comment
+ * - Admin can restore any comment
+ * - Only deleted comments can be restored
+ */
+const restoreComment = catchAsync(async (req: Request, res: Response) => {
+  const userId = req.user?.userId as string;
+  const userRole = req.user?.role as Role;
+
+  const { commentId } = req.params;
+
+  const result = await CommentService.restoreComment(
+    userId,
+    userRole,
+    commentId as string,
+  );
+
+  sendResponse(res, {
+    httpStatusCode: status.OK,
+    success: true,
+    message: "Comment restored successfully",
+    data: result,
+  });
+});
+
 export const CommentController = {
   createComment,
   updateComment,
   deleteComment,
+  restoreComment,
 };
