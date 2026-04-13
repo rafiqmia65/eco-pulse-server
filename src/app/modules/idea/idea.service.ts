@@ -87,8 +87,9 @@ const createIdea = async (payload: IIdea, authorId: string) => {
  * - sorting (latest, top voted, most commented)
  * - ONLY APPROVED ideas
  * - PAID idea → limited data
+ * - VOTING SYSTEM (upvote/downvote/currentUserVote)
  */
-const getAllIdeas = async (query: IQueryParams) => {
+const getAllIdeas = async (query: IQueryParams & { userId?: string }) => {
   // 1. Initialize QueryBuilder
   const qb = new QueryBuilder(prisma.idea, query, {
     searchableFields: ["title", "description", "problem", "solution"],
@@ -121,6 +122,7 @@ const getAllIdeas = async (query: IQueryParams) => {
     .include({
       author: true,
       category: true,
+      votes: true, // 🔥 IMPORTANT (added)
     });
 
   // override sorting
@@ -129,15 +131,40 @@ const getAllIdeas = async (query: IQueryParams) => {
   // 4. Execute
   const result = await qb.execute();
 
-  // 5. Modify response 🔥
+  // 5. Transform Response
   const modifiedData = result.data.map((idea: any) => {
-    // Safe description truncate
+    // -----------------------------
+    // SHORT DESCRIPTION
+    // -----------------------------
     const shortDescription =
       idea.description?.length > 100
         ? idea.description.slice(0, 100) + "..."
         : idea.description;
 
+    // -----------------------------
+    // VOTE CALCULATION
+    // -----------------------------
+    const upvotes = idea.votes?.filter((v: any) => v.value === 1).length || 0;
+
+    const downvotes =
+      idea.votes?.filter((v: any) => v.value === -1).length || 0;
+
+    const votesCount = upvotes - downvotes;
+
+    // -----------------------------
+    // CURRENT USER VOTE
+    // -----------------------------
+    let currentUserVote: number | null = null;
+
+    if (query.userId) {
+      const vote = idea.votes?.find((v: any) => v.userId === query.userId);
+
+      currentUserVote = vote ? vote.value : null;
+    }
+
+    // -----------------------------
     // PAID IDEA
+    // -----------------------------
     if (idea.isPaid) {
       return {
         id: idea.id,
@@ -148,7 +175,12 @@ const getAllIdeas = async (query: IQueryParams) => {
         image: idea.image,
         price: idea.price,
         isPaid: idea.isPaid,
-        votesCount: idea.votesCount,
+
+        upvotes,
+        downvotes,
+        votesCount,
+        currentUserVote,
+
         commentsCount: idea.commentsCount,
         category: idea.category,
         author: idea.author,
@@ -156,7 +188,9 @@ const getAllIdeas = async (query: IQueryParams) => {
       };
     }
 
+    // -----------------------------
     // FREE IDEA
+    // -----------------------------
     const shortSolution =
       idea.solution?.length > 50
         ? idea.solution.slice(0, 50) + "..."
@@ -171,7 +205,12 @@ const getAllIdeas = async (query: IQueryParams) => {
       image: idea.image,
       price: idea.price,
       isPaid: idea.isPaid,
-      votesCount: idea.votesCount,
+
+      upvotes,
+      downvotes,
+      votesCount,
+      currentUserVote,
+
       commentsCount: idea.commentsCount,
       category: idea.category,
       author: idea.author,
@@ -179,6 +218,7 @@ const getAllIdeas = async (query: IQueryParams) => {
     };
   });
 
+  // 6. Return
   return {
     data: modifiedData,
     meta: result.meta,

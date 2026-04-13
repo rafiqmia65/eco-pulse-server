@@ -31,14 +31,22 @@ const createIdea = catchAsync(async (req: Request, res: Response) => {
  * @desc Get all ideas (public listing)
  * @route GET /api/v1/ideas
  * @access Public
- * Features:
- * - Search by title and description
- * - Filter by status, category, author, date range
- * - Pagination
- * - Sorting by newest, most voted, etc.
+ * Get all ideas with:
+ * - pagination
+ * - search
+ * - filter (category, isPaid, author, votes range)
+ * - sorting (latest, top voted, most commented)
+ * - ONLY APPROVED ideas
+ * - PAID idea → limited data
+ * - VOTING SYSTEM (upvote/downvote/currentUserVote)
  */
 const getAllIdeas = catchAsync(async (req: Request, res: Response) => {
-  const result = await IdeaService.getAllIdeas(req.query as IQueryParams);
+  const userId = req.user?.userId;
+
+  const result = await IdeaService.getAllIdeas({
+    ...req.query,
+    userId,
+  } as IQueryParams);
 
   sendResponse(res, {
     httpStatusCode: status.OK,

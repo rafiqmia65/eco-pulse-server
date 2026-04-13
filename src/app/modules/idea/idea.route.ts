@@ -25,7 +25,7 @@ ideaRoutes.post(
  * @route GET /api/v1/ideas
  * @access Public
  */
-ideaRoutes.get("/", IdeaController.getAllIdeas);
+ideaRoutes.get("/", optionalAuth, IdeaController.getAllIdeas);
 
 /**
  * @desc Get my ideas (member dashboard)
