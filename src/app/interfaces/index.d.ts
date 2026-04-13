@@ -7,7 +7,7 @@ declare global {
         userId: string;
         role: Role;
         email: string;
-      };
+      } | undefined;
     }
   }
 }

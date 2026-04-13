@@ -778,7 +778,7 @@ const getLatestIdeas = async (userId?: string) => {
  * @route GET /api/v1/ideas/trending
  * @access Public
  */
-const getTrendingIdeas = async () => {
+const getTrendingIdeas = async (userId?: string) => {
   const sevenDaysAgo = new Date();
   sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
 
@@ -798,10 +798,13 @@ const getTrendingIdeas = async () => {
         },
       },
       category: true,
+      votes: true,
     },
   });
 
-  // calculate engagement
+  // -----------------------------
+  // ENGAGEMENT CALCULATION
+  // -----------------------------
   const rankedIdeas = ideas
     .map((idea: any) => ({
       ...idea,
@@ -811,14 +814,36 @@ const getTrendingIdeas = async () => {
     .sort((a, b) => b.engagementScore - a.engagementScore)
     .slice(0, 6);
 
-  // Transform response (same as getAllIdeas)
+  // -----------------------------
+  // TRANSFORM RESPONSE
+  // -----------------------------
   const modifiedData = rankedIdeas.map((idea: any) => {
     const shortDescription =
       idea.description?.length > 100
         ? idea.description.slice(0, 100) + "..."
         : idea.description;
 
+    // -----------------------------
+    // CURRENT USER VOTE
+    // -----------------------------
+    let currentUserVote: number | null = null;
+
+    if (userId) {
+      const vote = idea.votes.find((v: any) => v.userId === userId);
+      currentUserVote = vote ? vote.value : null;
+    }
+
+    // -----------------------------
+    // VOTE STATS
+    // -----------------------------
+    const upvotes = idea.votes.filter((v: any) => v.value === 1).length;
+    const downvotes = idea.votes.filter((v: any) => v.value === -1).length;
+
+    const votesCount = upvotes - downvotes;
+
+    // -----------------------------
     // PAID IDEA
+    // -----------------------------
     if (idea.isPaid) {
       return {
         id: idea.id,
@@ -829,7 +854,12 @@ const getTrendingIdeas = async () => {
         image: idea.image,
         price: idea.price,
         isPaid: idea.isPaid,
-        votesCount: idea.votesCount,
+
+        upvotes,
+        downvotes,
+        votesCount,
+        currentUserVote,
+
         commentsCount: idea.commentsCount,
         category: idea.category,
         author: idea.author,
@@ -837,7 +867,9 @@ const getTrendingIdeas = async () => {
       };
     }
 
+    // -----------------------------
     // FREE IDEA
+    // -----------------------------
     const shortSolution =
       idea.solution?.length > 50
         ? idea.solution.slice(0, 50) + "..."
@@ -852,7 +884,12 @@ const getTrendingIdeas = async () => {
       image: idea.image,
       price: idea.price,
       isPaid: idea.isPaid,
-      votesCount: idea.votesCount,
+
+      upvotes,
+      downvotes,
+      votesCount,
+      currentUserVote,
+
       commentsCount: idea.commentsCount,
       category: idea.category,
       author: idea.author,

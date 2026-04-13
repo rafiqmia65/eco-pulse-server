@@ -196,7 +196,9 @@ const getLatestIdeas = catchAsync(async (req: Request, res: Response) => {
  * - Trending = most votes + comments in last 7 days
  */
 const getTrendingIdeas = catchAsync(async (req: Request, res: Response) => {
-  const result = await IdeaService.getTrendingIdeas();
+  const userId = req.user?.userId; // optional user
+
+  const result = await IdeaService.getTrendingIdeas(userId);
 
   sendResponse(res, {
     httpStatusCode: status.OK,

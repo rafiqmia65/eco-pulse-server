@@ -4,6 +4,7 @@ import { validateRequest } from "../../middlewares/validateRequest";
 import { createIdeaSchema, ideaUpdateSchema } from "./idea.validation";
 import { IdeaController } from "./idea.controller";
 import { Role } from "../../../../generated/prisma/enums";
+import { optionalAuth } from "../../middlewares/optionalAuth";
 
 const ideaRoutes: Router = Router();
 
@@ -85,14 +86,14 @@ ideaRoutes.get(
  * @route GET /api/v1/ideas/latest
  * @access Public
  */
-ideaRoutes.get("/latest", IdeaController.getLatestIdeas);
+ideaRoutes.get("/latest", optionalAuth, IdeaController.getLatestIdeas);
 
 /**
  * @desc Get trending ideas (based on votes and comments in last 7 days)
  * @route GET /api/v1/ideas/trending
  * @access Public
  */
-ideaRoutes.get("/trending", IdeaController.getTrendingIdeas);
+ideaRoutes.get("/trending", optionalAuth, IdeaController.getTrendingIdeas);
 
 /**
  * @desc Delete Idea (Only unpublished)
