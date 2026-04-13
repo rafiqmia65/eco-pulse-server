@@ -1,5 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
+import { Comment, User } from "../../../../generated/prisma/client";
+
 /**
  * =========================
  * TYPES
@@ -12,7 +14,10 @@ export type VoteType = {
   value: number;
 };
 
-export type CommentType = any;
+export type CommentWithRelations = Comment & {
+  user: User;
+  replies: (Comment & { user: User })[];
+};
 
 /**
  * =========================
@@ -45,7 +50,7 @@ export const getVoteData = (votes: VoteType[] = [], userId?: string) => {
  * COMMENT MAPPER
  * =========================
  */
-export const mapComments = (comments: CommentType[] = []) => {
+export const mapComments = (comments: CommentWithRelations[] = []) => {
   return comments.map((c) => ({
     id: c.id,
     content: c.isDeleted ? "This comment has been deleted" : c.content,

@@ -4,6 +4,7 @@ import AppError from "../../helpers/errorHelpers/AppError";
 import { IQueryParams } from "../../interfaces/query.interface";
 import { prisma } from "../../lib/prisma";
 import { QueryBuilder } from "../../utils/QueryBuilder";
+import { CommentWithRelations, mapComments } from "../idea/idea.helpers";
 
 /**
  * Admin: Get all ideas (moderation)
@@ -163,7 +164,7 @@ const rejectIdea = async (ideaId: string, feedback: string) => {
  */
 
 const getSingleIdea = async (ideaId: string, page: number, limit: number) => {
-  // Fetch idea
+  // 1. Fetch idea
   const idea = await prisma.idea.findUnique({
     where: { id: ideaId },
     include: {
@@ -178,20 +179,18 @@ const getSingleIdea = async (ideaId: string, page: number, limit: number) => {
     },
   });
 
-  // Not found check
   if (!idea) {
     throw new AppError(404, "Idea not found");
   }
 
-  // BLOCK only DRAFT
   if (idea.status === IdeaStatus.DRAFT) {
     throw new AppError(403, "Draft ideas are not accessible to admin");
   }
 
-  // Comments (pagination via QueryBuilder)
-  const comments = await new QueryBuilder(prisma.comment as any, {
-    page: page.toString(),
-    limit: limit.toString(),
+  // 2. COMMENTS (same QueryBuilder pattern)
+  const commentsResult = await new QueryBuilder(prisma.comment as any, {
+    page: String(page),
+    limit: String(limit),
     sortBy: "createdAt",
     sortOrder: "desc",
   })
@@ -200,6 +199,7 @@ const getSingleIdea = async (ideaId: string, page: number, limit: number) => {
     .where({
       ideaId: idea.id,
       parentId: null,
+      isDeleted: false,
     })
     .include({
       user: true,
@@ -207,14 +207,20 @@ const getSingleIdea = async (ideaId: string, page: number, limit: number) => {
         include: {
           user: true,
         },
+        orderBy: {
+          createdAt: "asc",
+        },
       },
     })
     .execute();
 
+  // 3. SAME COMMENT FORMAT AS OTHER APIs
+  const comments = mapComments(commentsResult.data as CommentWithRelations[]);
+
   return {
     ...idea,
-    comments: comments.data,
-    commentsMeta: comments.meta,
+    comments,
+    commentsMeta: commentsResult.meta,
   };
 };
 

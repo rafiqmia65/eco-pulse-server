@@ -362,39 +362,70 @@ const updateIdea = async (
  * @route GET /api/v1/ideas/me/:id
  * @access Private (Member - only owner)
  */
-const getMySingleIdea = async (ideaId: string, userId: string) => {
+const getMySingleIdea = async (
+  ideaId: string,
+  userId: string,
+  page = 1,
+  limit = 5,
+) => {
+  // 1. Fetch idea (light include like admin pattern)
   const idea = await prisma.idea.findUnique({
     where: { id: ideaId },
     include: {
       author: true,
       category: true,
       votes: true,
-      feedback: true, // one-to-one relation
-      comments: {
-        include: {
-          user: true,
-          replies: {
-            include: {
-              user: true,
-            },
-          },
-        },
-      },
+      feedback: true,
     },
   });
 
+  // 2. Not found check
   if (!idea) {
     throw new AppError(404, "Idea not found");
   }
 
-  // Only owner can access
+  // 3. Ownership check
   if (idea.authorId !== userId) {
     throw new AppError(403, "You are not allowed to view this idea");
   }
 
-  // format response
+  // 4. PAGINATED COMMENTS (same pattern as admin)
+  const commentsResult = await new QueryBuilder(prisma.comment as any, {
+    page: String(page),
+    limit: String(limit),
+    sortBy: "createdAt",
+    sortOrder: "desc",
+  })
+    .paginate()
+    .sort()
+    .where({
+      ideaId: idea.id,
+      parentId: null,
+      isDeleted: false,
+    })
+    .include({
+      user: true,
+      replies: {
+        include: {
+          user: true,
+        },
+        orderBy: {
+          createdAt: "asc",
+        },
+      },
+    })
+    .execute();
+
+  // 5. Map comments (clean reusable format)
+  const formattedComments = mapComments(commentsResult.data as any);
+
+  // 6. FINAL RESPONSE (clean + production ready)
   return {
     ...idea,
+
+    comments: formattedComments,
+    commentsMeta: commentsResult.meta,
+
     feedback: idea.feedback
       ? {
           id: idea.feedback.id,
@@ -490,6 +521,7 @@ export const getIdeaAccess = async (
   page = 1,
   limit = 5,
 ) => {
+  // 1. Fetch idea
   const idea = await prisma.idea.findUnique({
     where: { id: ideaId },
     include: {
@@ -505,39 +537,53 @@ export const getIdeaAccess = async (
     },
   });
 
-  if (!idea) throw new AppError(404, "Idea not found");
+  if (!idea) {
+    throw new AppError(404, "Idea not found");
+  }
 
+  // 2. Block non-approved ideas
   if (idea.status !== IdeaStatus.APPROVED) {
     throw new AppError(403, "This idea is not publicly available");
   }
 
-  const commentsResult = await new QueryBuilder(prisma.comment, {
+  // 3. COMMENTS (Admin-style QueryBuilder)
+  const commentsResult = await new QueryBuilder(prisma.comment as any, {
     page: String(page),
     limit: String(limit),
     sortBy: "createdAt",
     sortOrder: "desc",
   })
+    .paginate()
+    .sort()
     .where({
       ideaId: idea.id,
       parentId: null,
+      isDeleted: false,
     })
     .include({
       user: true,
       replies: {
-        include: { user: true },
+        include: {
+          user: true,
+        },
+        orderBy: {
+          createdAt: "asc",
+        },
       },
     })
     .execute();
 
+  // 4. Vote processing
   const voteData = getVoteData(idea.votes, userId);
-  const comments = mapComments(commentsResult.data);
 
-  // FULL DATA BASE (NO TRUNCATE HERE)
-  const fullResponse = {
+  // 5. Map comments (clean reusable format)
+  const comments = mapComments(commentsResult.data as any);
+
+  // 6. Base response
+  const baseResponse = {
     id: idea.id,
     title: idea.title,
-    description: idea.description, // FULL always here
-
+    description: idea.description,
     image: idea.image,
     price: idea.price,
     isPaid: idea.isPaid,
@@ -552,46 +598,46 @@ export const getIdeaAccess = async (
     createdAt: idea.createdAt,
   };
 
-  // ADMIN
+  // 7. ADMIN ACCESS
   if (role === Role.ADMIN) {
     return {
-      ...fullResponse,
+      ...baseResponse,
       solution: idea.solution,
       isLocked: false,
       accessLevel: "ADMIN_FULL_ACCESS",
     };
   }
 
-  // OWNER
+  // 8. OWNER ACCESS
   const isOwner = userId && idea.authorId === userId;
   if (isOwner) {
     return {
-      ...fullResponse,
+      ...baseResponse,
       solution: idea.solution,
       isLocked: false,
       accessLevel: "OWNER_FULL_ACCESS",
     };
   }
 
-  // FREE IDEA → FULL ACCESS (IMPORTANT FIX)
+  // 9. FREE IDEA (no payment needed)
   if (!idea.isPaid) {
     return {
-      ...fullResponse,
-      solution: idea.solution, // FULL
+      ...baseResponse,
+      solution: idea.solution,
       isLocked: false,
       accessLevel: "PUBLIC_FREE",
     };
   }
 
-  // PAID CHECK
+  // 10. PAID CHECK
   const hasPaid = idea.payments.some(
     (p) => p.userId === userId && p.status === PaymentStatus.PAID,
   );
 
-  // LIMITED VIEW
+  // 11. LIMITED VIEW (not paid)
   if (!hasPaid) {
     return {
-      ...fullResponse,
+      ...baseResponse,
       description: truncateText(idea.description, 120),
       solution: "Unlock full solution by purchasing this idea",
       isLocked: true,
@@ -599,9 +645,9 @@ export const getIdeaAccess = async (
     };
   }
 
-  // PAID USER
+  // 12. PAID USER FULL ACCESS
   return {
-    ...fullResponse,
+    ...baseResponse,
     solution: idea.solution,
     isLocked: false,
     accessLevel: "PAID_FULL_ACCESS",
