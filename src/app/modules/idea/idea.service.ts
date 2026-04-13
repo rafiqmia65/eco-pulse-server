@@ -8,6 +8,7 @@ import AppError from "../../helpers/errorHelpers/AppError";
 import { IQueryParams } from "../../interfaces/query.interface";
 import { prisma } from "../../lib/prisma";
 import { QueryBuilder } from "../../utils/QueryBuilder";
+import { getVoteData, mapComments, truncateText } from "./idea.helpers";
 import { IIdea } from "./idea.interface";
 
 /**
@@ -482,23 +483,19 @@ const getMyIdeas = async (userId: string, query: IQueryParams) => {
  * - Comments are included for all users who can access the idea
  */
 
-const getIdeaAccess = async (
+export const getIdeaAccess = async (
   ideaId: string,
   userId?: string,
   role?: Role,
   page = 1,
   limit = 5,
 ) => {
-  // helper: safe truncate
-  const truncate = (text: string, length: number) =>
-    text?.length > length ? text.slice(0, length) + "..." : text;
-
-  // 1. Fetch idea
   const idea = await prisma.idea.findUnique({
     where: { id: ideaId },
     include: {
       author: true,
       category: true,
+      votes: true,
       payments: {
         select: {
           userId: true,
@@ -508,31 +505,18 @@ const getIdeaAccess = async (
     },
   });
 
-  if (!idea) {
-    throw new AppError(404, "Idea not found");
-  }
+  if (!idea) throw new AppError(404, "Idea not found");
 
-  // 2. Only APPROVED ideas are public
   if (idea.status !== IdeaStatus.APPROVED) {
     throw new AppError(403, "This idea is not publicly available");
   }
 
-  // 3. Comments (shared for all access levels)
-  const commentsResult = await new QueryBuilder(
-    prisma.comment,
-    {
-      page: String(page),
-      limit: String(limit),
-      sortBy: "createdAt",
-      sortOrder: "desc",
-    },
-    {
-      searchableFields: ["content"],
-    },
-  )
-    .filter()
-    .paginate()
-    .sort()
+  const commentsResult = await new QueryBuilder(prisma.comment, {
+    page: String(page),
+    limit: String(limit),
+    sortBy: "createdAt",
+    sortOrder: "desc",
+  })
     .where({
       ideaId: idea.id,
       parentId: null,
@@ -545,153 +529,82 @@ const getIdeaAccess = async (
     })
     .execute();
 
-  // 4. ADMIN → FULL ACCESS
-  if (role === Role.ADMIN) {
-    return {
-      id: idea.id,
-      title: idea.title,
-      description: truncate(idea.description, 120),
+  const voteData = getVoteData(idea.votes, userId);
+  const comments = mapComments(commentsResult.data);
 
-      solution: idea.solution,
-      isLocked: false,
-
-      image: idea.image,
-      price: idea.price,
-      isPaid: idea.isPaid,
-
-      votesCount: idea.votesCount,
-      commentsCount: idea.commentsCount,
-
-      category: idea.category,
-      author: idea.author,
-      createdAt: idea.createdAt,
-
-      comments: commentsResult.data,
-      commentsMeta: commentsResult.meta,
-
-      accessLevel: "ADMIN_FULL_ACCESS",
-      message: "Admin access: full idea visibility granted",
-    };
-  }
-
-  // 5. OWNER → FULL ACCESS
-  const isOwner = userId && idea.authorId === userId;
-  if (isOwner) {
-    return {
-      id: idea.id,
-      title: idea.title,
-      description: truncate(idea.description, 120),
-
-      solution: idea.solution,
-      isLocked: false,
-
-      image: idea.image,
-      price: idea.price,
-      isPaid: idea.isPaid,
-
-      votesCount: idea.votesCount,
-      commentsCount: idea.commentsCount,
-
-      category: idea.category,
-      author: idea.author,
-      createdAt: idea.createdAt,
-
-      comments: commentsResult.data,
-      commentsMeta: commentsResult.meta,
-
-      accessLevel: "OWNER_FULL_ACCESS",
-      message: "You are the owner of this idea",
-    };
-  }
-
-  // 6. FREE idea → FULL ACCESS
-  if (!idea.isPaid) {
-    return {
-      id: idea.id,
-      title: idea.title,
-      description: truncate(idea.description, 120),
-
-      solution: idea.solution,
-      isLocked: false,
-
-      image: idea.image,
-      price: idea.price,
-      isPaid: idea.isPaid,
-
-      votesCount: idea.votesCount,
-      commentsCount: idea.commentsCount,
-
-      category: idea.category,
-      author: idea.author,
-      createdAt: idea.createdAt,
-
-      comments: commentsResult.data,
-      commentsMeta: commentsResult.meta,
-
-      accessLevel: "PUBLIC_FREE",
-    };
-  }
-
-  // 7. PAID check
-  const hasPaid = idea.payments.some(
-    (p) => p.userId === userId && p.status === PaymentStatus.PAID,
-  );
-
-  // 8. NOT PAID → LIMITED VIEW (CONSISTENT WITH TRENDING API)
-  if (!hasPaid) {
-    return {
-      id: idea.id,
-      title: idea.title,
-      description: truncate(idea.description, 120),
-
-      image: idea.image,
-      price: idea.price,
-      isPaid: idea.isPaid,
-
-      votesCount: idea.votesCount,
-      commentsCount: idea.commentsCount,
-
-      category: idea.category,
-      author: idea.author,
-      createdAt: idea.createdAt,
-
-      // locked like trending API
-      solution: "Unlock full solution by purchasing this idea",
-      isLocked: true,
-
-      comments: commentsResult.data,
-      commentsMeta: commentsResult.meta,
-
-      accessLevel: "LIMITED_PREVIEW",
-      message: "Buy this idea to unlock full content",
-    };
-  }
-
-  // 9. PAID USER → FULL ACCESS
-  return {
+  // FULL DATA BASE (NO TRUNCATE HERE)
+  const fullResponse = {
     id: idea.id,
     title: idea.title,
-    description: truncate(idea.description, 120),
-
-    solution: idea.solution,
-    isLocked: false,
+    description: idea.description, // FULL always here
 
     image: idea.image,
     price: idea.price,
     isPaid: idea.isPaid,
 
-    votesCount: idea.votesCount,
-    commentsCount: idea.commentsCount,
+    ...voteData,
+
+    comments,
+    commentsMeta: commentsResult.meta,
 
     category: idea.category,
     author: idea.author,
     createdAt: idea.createdAt,
+  };
 
-    comments: commentsResult.data,
-    commentsMeta: commentsResult.meta,
+  // ADMIN
+  if (role === Role.ADMIN) {
+    return {
+      ...fullResponse,
+      solution: idea.solution,
+      isLocked: false,
+      accessLevel: "ADMIN_FULL_ACCESS",
+    };
+  }
 
+  // OWNER
+  const isOwner = userId && idea.authorId === userId;
+  if (isOwner) {
+    return {
+      ...fullResponse,
+      solution: idea.solution,
+      isLocked: false,
+      accessLevel: "OWNER_FULL_ACCESS",
+    };
+  }
+
+  // FREE IDEA → FULL ACCESS (IMPORTANT FIX)
+  if (!idea.isPaid) {
+    return {
+      ...fullResponse,
+      solution: idea.solution, // FULL
+      isLocked: false,
+      accessLevel: "PUBLIC_FREE",
+    };
+  }
+
+  // PAID CHECK
+  const hasPaid = idea.payments.some(
+    (p) => p.userId === userId && p.status === PaymentStatus.PAID,
+  );
+
+  // LIMITED VIEW
+  if (!hasPaid) {
+    return {
+      ...fullResponse,
+      description: truncateText(idea.description, 120),
+      solution: "Unlock full solution by purchasing this idea",
+      isLocked: true,
+      accessLevel: "LIMITED_PREVIEW",
+    };
+  }
+
+  // PAID USER
+  return {
+    ...fullResponse,
+    solution: idea.solution,
+    isLocked: false,
     accessLevel: "PAID_FULL_ACCESS",
-    message: "Payment verified - full access granted",
   };
 };
 
