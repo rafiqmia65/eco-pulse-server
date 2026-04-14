@@ -546,9 +546,136 @@ const getMyPurchasedIdeaDetails = async (
   };
 };
 
+/**
+ * @desc Get payment history of logged-in user
+ * @route GET /api/v1/payments/history
+ * @access Private (Member)
+ */
+const getPaymentHistory = async (
+  userId: string,
+  query: Record<string, any>,
+) => {
+  const { page = 1, limit = 10, status } = query;
+
+  const skip = (Number(page) - 1) * Number(limit);
+
+  // Filter
+  const whereCondition: any = {
+    userId,
+  };
+
+  if (status) {
+    whereCondition.status = status;
+  }
+
+  // ======================
+  // STATS CALCULATION
+  // ======================
+  const allPayments = await prisma.payment.findMany({
+    where: { userId },
+  });
+
+  const totalSpent = allPayments
+    .filter((p) => p.status === PaymentStatus.PAID)
+    .reduce((sum, p) => sum + p.amount, 0);
+
+  const totalPurchases = allPayments.length;
+
+  const successPayments = allPayments.filter(
+    (p) => p.status === PaymentStatus.PAID,
+  ).length;
+
+  const pendingPayments = allPayments.filter(
+    (p) => p.status === PaymentStatus.PENDING,
+  ).length;
+
+  // ======================
+  // Pagination Count
+  // ======================
+  const total = await prisma.payment.count({
+    where: whereCondition,
+  });
+
+  // ======================
+  // Fetch Payments
+  // ======================
+  const payments = await prisma.payment.findMany({
+    where: whereCondition,
+    skip,
+    take: Number(limit),
+    orderBy: {
+      createdAt: "desc",
+    },
+    include: {
+      idea: {
+        select: {
+          id: true,
+          title: true,
+          image: true,
+          price: true,
+          slug: true,
+          category: {
+            select: {
+              name: true,
+            },
+          },
+          author: {
+            select: {
+              name: true,
+            },
+          },
+        },
+      },
+    },
+  });
+
+  // ======================
+  // Format Response
+  // ======================
+  const formattedData = payments.map((payment) => ({
+    paymentId: payment.id,
+    transactionId: payment.transactionId,
+    amount: payment.amount,
+    status: payment.status,
+    gateway: payment.gateway,
+    paidAt: payment.paidAt,
+    createdAt: payment.createdAt,
+
+    idea: {
+      id: payment.idea.id,
+      title: payment.idea.title,
+      image: payment.idea.image,
+      price: payment.idea.price,
+      slug: payment.idea.slug,
+      category: payment.idea.category?.name,
+      author: payment.idea.author?.name,
+    },
+  }));
+
+  return {
+    meta: {
+      page: Number(page),
+      limit: Number(limit),
+      total,
+      totalPages: Math.ceil(total / Number(limit)),
+    },
+
+    // NEW
+    stats: {
+      totalSpent,
+      totalPurchases,
+      successPayments,
+      pendingPayments,
+    },
+
+    data: formattedData,
+  };
+};
+
 export const PaymentService = {
   handlerStripeWebhookEvent,
   createIdeaPurchase,
   getMyPurchasedIdeas,
   getMyPurchasedIdeaDetails,
+  getPaymentHistory,
 };

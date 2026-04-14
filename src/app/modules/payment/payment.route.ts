@@ -37,4 +37,15 @@ PaymentRoutes.post(
   PaymentController.createIdeaPurchase,
 );
 
+/**
+ * @desc Get payment history of logged-in user
+ * @route GET /api/v1/payments/history
+ * @access Private (Member)
+ */
+PaymentRoutes.get(
+  "/history",
+  checkAuth(Role.MEMBER),
+  PaymentController.getPaymentHistory,
+);
+
 export default PaymentRoutes;

@@ -139,9 +139,35 @@ const getMyPurchasedIdeaDetails = catchAsync(
   },
 );
 
+/**
+ * @desc Get payment history of logged-in user
+ * @route GET /api/v1/payments/history
+ * @access Private (Member)
+ */
+const getPaymentHistory = catchAsync(async (req: Request, res: Response) => {
+  const userId = req.user?.userId;
+
+  const result = await PaymentService.getPaymentHistory(
+    userId as string,
+    req.query,
+  );
+
+  sendResponse(res, {
+    httpStatusCode: status.OK,
+    success: true,
+    message: "Payment history fetched successfully",
+    data: {
+      list: result.data,
+      stats: result.stats,
+    },
+    meta: result.meta,
+  });
+});
+
 export const PaymentController = {
   handleStripeWebhookEvent,
   createIdeaPurchase,
   getMyPurchasedIdeas,
   getMyPurchasedIdeaDetails,
+  getPaymentHistory,
 };
