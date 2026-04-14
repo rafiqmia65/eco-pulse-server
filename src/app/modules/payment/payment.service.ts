@@ -7,6 +7,8 @@ import {
 } from "../../../../generated/prisma/enums";
 import { stripe } from "../../config/stripe.config";
 import { envVars } from "../../config/env";
+import { IQueryParams } from "../../interfaces/query.interface";
+import { QueryBuilder } from "../../utils/QueryBuilder";
 
 /**
  * @desc Service layer for handling payment logic, including Stripe webhook processing and idea purchases
@@ -239,7 +241,196 @@ const createIdeaPurchase = async (userId: string, ideaId: string) => {
   };
 };
 
+const getMyPurchasedIdeas = async (userId: string, query: IQueryParams) => {
+  const sortAliases: Record<string, { sortBy: string; sortOrder: "asc" | "desc" }> = {
+    latest: { sortBy: "paidAt", sortOrder: "desc" },
+    oldest: { sortBy: "paidAt", sortOrder: "asc" },
+    highest_amount: { sortBy: "amount", sortOrder: "desc" },
+    lowest_amount: { sortBy: "amount", sortOrder: "asc" },
+    title_asc: { sortBy: "idea.title", sortOrder: "asc" },
+    title_desc: { sortBy: "idea.title", sortOrder: "desc" },
+  };
+
+  const normalizedQuery: IQueryParams = { ...query };
+  const aliasSort = query.sortBy ? sortAliases[query.sortBy] : undefined;
+
+  if (aliasSort) {
+    normalizedQuery.sortBy = aliasSort.sortBy;
+    normalizedQuery.sortOrder = aliasSort.sortOrder;
+  }
+
+  const queryBuilder = new QueryBuilder(prisma.payment, normalizedQuery, {
+    searchableFields: ["idea.title", "idea.description"],
+    filterableFields: [
+      "ideaId",
+      "gateway",
+      "amount",
+      "paidAt",
+      "idea.categoryId",
+    ],
+  });
+
+  const result = await queryBuilder
+    .search()
+    .filter()
+    .sort()
+    .paginate()
+    .include({
+      idea: {
+        include: {
+          author: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+            },
+          },
+          category: true,
+        },
+      },
+    })
+    .where({
+      userId,
+      status: PaymentStatus.PAID,
+    })
+    .execute();
+
+  const now = new Date();
+  const sevenDaysAgo = new Date(now);
+  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+  const thirtyDaysAgo = new Date(now);
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+
+  const [
+    aggregate,
+    last7DaysPurchases,
+    last30DaysPurchases,
+    thisMonthPurchases,
+    highestPurchase,
+    uniquePurchasedIdeas,
+    uniquePurchasedCategories,
+  ] = await Promise.all([
+    prisma.payment.aggregate({
+      where: {
+        userId,
+        status: PaymentStatus.PAID,
+      },
+      _sum: {
+        amount: true,
+      },
+      _avg: {
+        amount: true,
+      },
+    }),
+    prisma.payment.count({
+      where: {
+        userId,
+        status: PaymentStatus.PAID,
+        paidAt: {
+          gte: sevenDaysAgo,
+        },
+      },
+    }),
+    prisma.payment.count({
+      where: {
+        userId,
+        status: PaymentStatus.PAID,
+        paidAt: {
+          gte: thirtyDaysAgo,
+        },
+      },
+    }),
+    prisma.payment.count({
+      where: {
+        userId,
+        status: PaymentStatus.PAID,
+        paidAt: {
+          gte: monthStart,
+        },
+      },
+    }),
+    prisma.payment.findFirst({
+      where: {
+        userId,
+        status: PaymentStatus.PAID,
+      },
+      orderBy: {
+        amount: "desc",
+      },
+      select: {
+        amount: true,
+      },
+    }),
+    prisma.payment.findMany({
+      where: {
+        userId,
+        status: PaymentStatus.PAID,
+      },
+      select: {
+        ideaId: true,
+      },
+      distinct: ["ideaId"],
+    }),
+    prisma.payment.findMany({
+      where: {
+        userId,
+        status: PaymentStatus.PAID,
+      },
+      select: {
+        idea: {
+          select: {
+            categoryId: true,
+          },
+        },
+      },
+      distinct: ["ideaId"],
+    }),
+  ]);
+
+  const data = result.data.map((payment: any) => ({
+    paymentId: payment.id,
+    transactionId: payment.transactionId,
+    amount: payment.amount,
+    status: payment.status,
+    paidAt: payment.paidAt,
+    purchasedAt: payment.paidAt ?? payment.createdAt,
+    idea: {
+      id: payment.idea.id,
+      title: payment.idea.title,
+      slug: payment.idea.slug,
+      description: payment.idea.description,
+      image: payment.idea.image,
+      price: payment.idea.price,
+      isPaid: payment.idea.isPaid,
+      createdAt: payment.idea.createdAt,
+      category: payment.idea.category,
+      author: payment.idea.author,
+    },
+  }));
+
+  return {
+    data,
+    meta: result.meta,
+    summary: {
+      totalPurchased: uniquePurchasedIdeas.length,
+      totalSpent: aggregate._sum.amount ?? 0,
+      averageSpend: Number((aggregate._avg.amount ?? 0).toFixed(2)),
+      highestPurchaseAmount: highestPurchase?.amount ?? 0,
+      last7DaysPurchases,
+      last30DaysPurchases,
+      thisMonthPurchases,
+      uniqueCategoriesPurchased: new Set(
+        uniquePurchasedCategories.map((payment) => payment.idea.categoryId),
+      ).size,
+    },
+  };
+};
+
 export const PaymentService = {
   handlerStripeWebhookEvent,
   createIdeaPurchase,
+  getMyPurchasedIdeas,
 };

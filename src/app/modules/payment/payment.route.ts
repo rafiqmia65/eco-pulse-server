@@ -5,6 +5,11 @@ import { Role } from "../../../../generated/prisma/enums";
 
 const PaymentRoutes: Router = Router();
 
+PaymentRoutes.get(
+  "/my-purchases-ideas",
+  checkAuth(Role.MEMBER),
+  PaymentController.getMyPurchasedIdeas,
+);
 
 /** * @desc Handle Stripe webhook events for payment processing
  * @route POST /api/payments/webhook

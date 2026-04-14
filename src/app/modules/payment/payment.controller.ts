@@ -3,6 +3,7 @@ import status from "http-status";
 import Stripe from "stripe";
 import { envVars } from "../../config/env";
 import { stripe } from "../../config/stripe.config";
+import { IQueryParams } from "../../interfaces/query.interface";
 import { catchAsync } from "../../shared/catchAsync";
 import { sendResponse } from "../../shared/sendResponse";
 import { PaymentService } from "./payment.service";
@@ -90,7 +91,26 @@ const createIdeaPurchase = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+const getMyPurchasedIdeas = catchAsync(async (req: Request, res: Response) => {
+  const userId = req.user?.userId as string;
+
+  const result = await PaymentService.getMyPurchasedIdeas(
+    userId,
+    req.query as IQueryParams,
+  );
+
+  return sendResponse(res, {
+    httpStatusCode: status.OK,
+    success: true,
+    message: "Purchased ideas fetched successfully",
+    data: result.data,
+    meta: result.meta,
+    counts: result.summary,
+  });
+});
+
 export const PaymentController = {
   handleStripeWebhookEvent,
   createIdeaPurchase,
+  getMyPurchasedIdeas,
 };
