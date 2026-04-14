@@ -109,8 +109,29 @@ const getMyPurchasedIdeas = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+const getMyPurchasedIdeaDetails = catchAsync(
+  async (req: Request, res: Response) => {
+    const userId = req.user?.userId as string;
+    const { ideaId } = req.params;
+
+    const result = await PaymentService.getMyPurchasedIdeaDetails(
+      userId,
+      ideaId as string,
+      req.query as IQueryParams,
+    );
+
+    return sendResponse(res, {
+      httpStatusCode: status.OK,
+      success: true,
+      message: "Purchased idea details fetched successfully",
+      data: result,
+    });
+  },
+);
+
 export const PaymentController = {
   handleStripeWebhookEvent,
   createIdeaPurchase,
   getMyPurchasedIdeas,
+  getMyPurchasedIdeaDetails,
 };

@@ -11,6 +11,12 @@ PaymentRoutes.get(
   PaymentController.getMyPurchasedIdeas,
 );
 
+PaymentRoutes.get(
+  "/my-purchases-ideas/:ideaId",
+  checkAuth(Role.MEMBER),
+  PaymentController.getMyPurchasedIdeaDetails,
+);
+
 /** * @desc Handle Stripe webhook events for payment processing
  * @route POST /api/payments/webhook
  * @access Public (Stripe will call this endpoint)

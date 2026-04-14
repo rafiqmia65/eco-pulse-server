@@ -7,8 +7,14 @@ import {
 } from "../../../../generated/prisma/enums";
 import { stripe } from "../../config/stripe.config";
 import { envVars } from "../../config/env";
+import AppError from "../../helpers/errorHelpers/AppError";
 import { IQueryParams } from "../../interfaces/query.interface";
 import { QueryBuilder } from "../../utils/QueryBuilder";
+import {
+  CommentWithRelations,
+  getVoteData,
+  mapComments,
+} from "../idea/idea.helpers";
 
 /**
  * @desc Service layer for handling payment logic, including Stripe webhook processing and idea purchases
@@ -242,7 +248,10 @@ const createIdeaPurchase = async (userId: string, ideaId: string) => {
 };
 
 const getMyPurchasedIdeas = async (userId: string, query: IQueryParams) => {
-  const sortAliases: Record<string, { sortBy: string; sortOrder: "asc" | "desc" }> = {
+  const sortAliases: Record<
+    string,
+    { sortBy: string; sortOrder: "asc" | "desc" }
+  > = {
     latest: { sortBy: "paidAt", sortOrder: "desc" },
     oldest: { sortBy: "paidAt", sortOrder: "asc" },
     highest_amount: { sortBy: "amount", sortOrder: "desc" },
@@ -429,8 +438,107 @@ const getMyPurchasedIdeas = async (userId: string, query: IQueryParams) => {
   };
 };
 
+const getMyPurchasedIdeaDetails = async (
+  userId: string,
+  ideaId: string,
+  query: IQueryParams,
+) => {
+  const payment = await prisma.payment.findFirst({
+    where: {
+      userId,
+      ideaId,
+      status: PaymentStatus.PAID,
+    },
+  });
+
+  if (!payment) {
+    throw new AppError(403, "You have not purchased this idea");
+  }
+
+  const idea = await prisma.idea.findUnique({
+    where: { id: ideaId },
+    include: {
+      author: true,
+      category: true,
+      votes: {
+        select: {
+          value: true,
+          userId: true,
+          id: true,
+          ideaId: true,
+        },
+      },
+    },
+  });
+
+  if (!idea) {
+    throw new AppError(404, "Idea not found");
+  }
+
+  const queryBuilder = new QueryBuilder(prisma.comment as any, {
+    page: query.page || "1",
+    limit: query.limit || "5",
+    sortBy: "createdAt",
+    sortOrder: "desc",
+  }).paginate();
+
+  const commentsResult = await queryBuilder
+    .sort()
+    .where({
+      ideaId: idea.id,
+      parentId: null,
+    })
+    .include({
+      user: true,
+      replies: {
+        include: {
+          user: true,
+        },
+        orderBy: {
+          createdAt: "asc",
+        },
+      },
+    })
+    .execute();
+
+  const comments = mapComments(commentsResult.data as CommentWithRelations[]);
+  const voteData = getVoteData(idea.votes as any, userId);
+
+  return {
+    id: idea.id,
+    title: idea.title,
+    problem: idea.problem,
+    solution: idea.solution,
+    description: idea.description,
+    image: idea.image,
+    slug: idea.slug,
+    isPaid: idea.isPaid,
+    price: idea.price,
+    status: idea.status,
+    isLocked: false,
+    accessLevel: "PURCHASED_FULL_ACCESS",
+    purchasedAt: payment.paidAt ?? payment.createdAt,
+    paymentInfo: {
+      paymentId: payment.id,
+      transactionId: payment.transactionId,
+      amount: payment.amount,
+      paidAt: payment.paidAt,
+      gateway: payment.gateway,
+      status: payment.status,
+    },
+    ...voteData,
+    comments,
+    commentsMeta: commentsResult.meta,
+    category: idea.category,
+    author: idea.author,
+    createdAt: idea.createdAt,
+    updatedAt: idea.updatedAt,
+  };
+};
+
 export const PaymentService = {
   handlerStripeWebhookEvent,
   createIdeaPurchase,
   getMyPurchasedIdeas,
+  getMyPurchasedIdeaDetails,
 };
