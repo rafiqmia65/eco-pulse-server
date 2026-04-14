@@ -7,6 +7,12 @@ import { catchAsync } from "../../shared/catchAsync";
 import { sendResponse } from "../../shared/sendResponse";
 import { PaymentService } from "./payment.service";
 
+/**
+ * @desc Handle Stripe webhook events for payment processing
+ * @route POST /api/payments/webhook
+ * @access Public (Stripe will call this endpoint)
+ *
+ */
 const handleStripeWebhookEvent = catchAsync(
   async (req: Request, res: Response) => {
     const signature = req.headers["stripe-signature"] as string;
@@ -62,6 +68,29 @@ const handleStripeWebhookEvent = catchAsync(
   },
 );
 
+/**
+ * @desc Create a Stripe checkout session for purchasing an idea
+ * @route POST /api/payments/ideas/:ideaId/purchase
+ * @access Private (Authenticated users)
+ */
+const createIdeaPurchase = catchAsync(async (req: Request, res: Response) => {
+  const userId = req.user?.userId; // from auth middleware
+  const { ideaId } = req.params;
+
+  const result = await PaymentService.createIdeaPurchase(
+    userId as string,
+    ideaId as string,
+  );
+
+  return sendResponse(res, {
+    httpStatusCode: status.CREATED,
+    success: true,
+    message: "Checkout session created successfully",
+    data: result,
+  });
+});
+
 export const PaymentController = {
   handleStripeWebhookEvent,
+  createIdeaPurchase,
 };

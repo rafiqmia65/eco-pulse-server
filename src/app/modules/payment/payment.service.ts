@@ -1,15 +1,34 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import Stripe from "stripe";
 import { prisma } from "../../lib/prisma";
-import { PaymentStatus } from "../../../../generated/prisma/enums";
+import {
+  PaymentGateway,
+  PaymentStatus,
+} from "../../../../generated/prisma/enums";
+import { stripe } from "../../config/stripe.config";
+import { envVars } from "../../config/env";
 
+/**
+ * @desc Service layer for handling payment logic, including Stripe webhook processing and idea purchases
+ */
 const getTransactionId = (session: Stripe.Checkout.Session) => {
+  if (session.id) {
+    return session.id;
+  }
+
   return typeof session.payment_intent === "string"
     ? session.payment_intent
     : session.payment_intent?.id;
 };
 
+// Safely stringify and parse data to ensure it's JSON-serializable for database storage
 const safeJson = (data: unknown) => JSON.parse(JSON.stringify(data));
 
+/**
+ * @desc Handle Stripe webhook events for payment processing
+ * @route POST /api/payments/webhook
+ * @access Public (Stripe will call this endpoint)
+ */
 const handlerStripeWebhookEvent = async (event: Stripe.Event) => {
   console.log("Stripe event received:", {
     type: event.type,
@@ -54,6 +73,7 @@ const handlerStripeWebhookEvent = async (event: Stripe.Event) => {
           status: PaymentStatus.PAID,
           paidAt: new Date(),
           gatewayData: safeJson(session),
+          stripeEventId: event.id,
         },
       });
 
@@ -72,6 +92,7 @@ const handlerStripeWebhookEvent = async (event: Stripe.Event) => {
           status: PaymentStatus.PAID,
           paidAt: new Date(),
           gatewayData: safeJson(intent),
+          stripeEventId: event.id,
         },
       });
 
@@ -94,6 +115,7 @@ const handlerStripeWebhookEvent = async (event: Stripe.Event) => {
           status: PaymentStatus.PAID,
           paidAt: new Date(),
           gatewayData: safeJson(session),
+          stripeEventId: event.id,
         },
       });
 
@@ -115,6 +137,7 @@ const handlerStripeWebhookEvent = async (event: Stripe.Event) => {
         data: {
           status: PaymentStatus.FAILED,
           gatewayData: safeJson(session),
+          stripeEventId: event.id,
         },
       });
 
@@ -126,6 +149,97 @@ const handlerStripeWebhookEvent = async (event: Stripe.Event) => {
   }
 };
 
+/** * @desc Create a Stripe checkout session for purchasing an idea
+ * @route POST /api/payments/ideas/:ideaId/purchase
+ * @access Private (Authenticated users)
+ */
+
+const createIdeaPurchase = async (userId: string, ideaId: string) => {
+  const idea = await prisma.idea.findUnique({
+    where: { id: ideaId },
+  });
+
+  if (!idea) {
+    throw new Error("Idea not found");
+  }
+
+  if (!idea.price) {
+    throw new Error("Idea is free, no payment required");
+  }
+
+  const existingPayment = await prisma.payment.findUnique({
+    where: {
+      userId_ideaId: {
+        userId,
+        ideaId,
+      },
+    },
+  });
+
+  if (existingPayment?.status === PaymentStatus.PAID) {
+    throw new Error("Already purchased this idea");
+  }
+
+  // create stripe session
+  const session = await stripe.checkout.sessions.create({
+    payment_method_types: ["card"],
+    mode: "payment",
+    success_url: `${envVars.FRONTEND_URL}/ideas/${ideaId}?success=true`,
+    cancel_url: `${envVars.FRONTEND_URL}/ideas/${ideaId}?canceled=true`,
+
+    line_items: [
+      {
+        price_data: {
+          currency: "usd",
+          product_data: {
+            name: idea.title,
+            description: idea.description,
+          },
+          unit_amount: Math.round(idea.price * 100),
+        },
+        quantity: 1,
+      },
+    ],
+
+    metadata: {
+      ideaId,
+      userId,
+    },
+  });
+
+  // Reuse the existing payment row for retries because userId + ideaId is unique.
+  const payment = existingPayment
+    ? await prisma.payment.update({
+        where: { id: existingPayment.id },
+        data: {
+          amount: idea.price,
+          status: PaymentStatus.PENDING,
+          transactionId: session.id,
+          gateway: PaymentGateway.STRIPE,
+          gatewayData: session as any,
+          stripeEventId: null,
+          paidAt: null,
+        },
+      })
+    : await prisma.payment.create({
+        data: {
+          amount: idea.price,
+          status: PaymentStatus.PENDING,
+          transactionId: session.id,
+          gateway: PaymentGateway.STRIPE,
+          gatewayData: session as any,
+          userId,
+          ideaId,
+        },
+      });
+
+  return {
+    checkoutUrl: session.url,
+    payment,
+  };
+};
+
 export const PaymentService = {
   handlerStripeWebhookEvent,
+  createIdeaPurchase,
 };

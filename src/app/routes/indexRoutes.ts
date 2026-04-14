@@ -7,6 +7,7 @@ import adminRoutes from "../modules/admin/admin.routes";
 import WatchListRoutes from "../modules/watchList/watchList.router";
 import VoteRoutes from "../modules/vote/vote.route";
 import CommentRoutes from "../modules/comment/comment.route";
+import PaymentRoutes from "../modules/payment/payment.route";
 
 const indexRoutes: Router = Router();
 
@@ -33,5 +34,8 @@ indexRoutes.use("/votes", VoteRoutes);
 
 // Mount the CommentRoutes under the /comments path
 indexRoutes.use("/comments", CommentRoutes);
+
+// Mount the PaymentRoutes under the /payments path
+indexRoutes.use("/payments", PaymentRoutes);
 
 export default indexRoutes;
