@@ -91,6 +91,11 @@ const createIdeaPurchase = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+/**
+ * @desc Get all purchased ideas for the authenticated user
+ * @route GET /api/payments/my-purchases-ideas
+ * @access Private (Authenticated users)
+ */
 const getMyPurchasedIdeas = catchAsync(async (req: Request, res: Response) => {
   const userId = req.user?.userId as string;
 
@@ -109,6 +114,11 @@ const getMyPurchasedIdeas = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+/**
+ * @desc Get details of a specific purchased idea for the authenticated user
+ * @route GET /api/payments/my-purchases-ideas/:ideaId
+ * @access Private (Authenticated users)
+ */
 const getMyPurchasedIdeaDetails = catchAsync(
   async (req: Request, res: Response) => {
     const userId = req.user?.userId as string;

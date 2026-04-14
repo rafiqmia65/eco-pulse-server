@@ -247,6 +247,11 @@ const createIdeaPurchase = async (userId: string, ideaId: string) => {
   };
 };
 
+/**
+ * @desc Get all purchased ideas for the authenticated user
+ * @route GET /api/payments/my-purchases-ideas
+ * @access Private (Authenticated users)
+ */
 const getMyPurchasedIdeas = async (userId: string, query: IQueryParams) => {
   const sortAliases: Record<
     string,
@@ -438,6 +443,11 @@ const getMyPurchasedIdeas = async (userId: string, query: IQueryParams) => {
   };
 };
 
+/**
+ * @desc Get details of a specific purchased idea for the authenticated user
+ * @route GET /api/payments/my-purchases-ideas/:ideaId
+ * @access Private (Authenticated users)
+ */
 const getMyPurchasedIdeaDetails = async (
   userId: string,
   ideaId: string,

@@ -5,12 +5,22 @@ import { Role } from "../../../../generated/prisma/enums";
 
 const PaymentRoutes: Router = Router();
 
+/**
+ * @desc Get all purchased ideas for the authenticated user
+ * @route GET /api/payments/my-purchases-ideas
+ * @access Private (Authenticated users)
+ */
 PaymentRoutes.get(
   "/my-purchases-ideas",
   checkAuth(Role.MEMBER),
   PaymentController.getMyPurchasedIdeas,
 );
 
+/**
+ * @desc Get details of a specific purchased idea for the authenticated user
+ * @route GET /api/payments/my-purchases-ideas/:ideaId
+ * @access Private (Authenticated users)
+ */
 PaymentRoutes.get(
   "/my-purchases-ideas/:ideaId",
   checkAuth(Role.MEMBER),
