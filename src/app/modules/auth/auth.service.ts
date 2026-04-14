@@ -17,7 +17,7 @@ import { tokenUtils } from "../../utils/token";
  * @throws  AppError if validation or registration fails
  */
 const registerUser = async (Payload: IRegisterPayload) => {
-  const { name, email, password } = Payload;
+  const { name, email, password, image } = Payload;
 
   // Required field validation
   if (!name?.trim() || !email?.trim() || !password?.trim()) {
@@ -55,6 +55,19 @@ const registerUser = async (Payload: IRegisterPayload) => {
 
   if (!data?.user) {
     throw new AppError(status.BAD_REQUEST, "User registration failed");
+  }
+
+  // SAVE IMAGE TO DATABASE (NEW ADDITION)
+  if (image) {
+    await prisma.user.update({
+      where: { id: data.user.id },
+      data: {
+        image,
+      },
+    });
+
+    // also update returned user object manually
+    data.user.image = image;
   }
 
   const accessToken = tokenUtils.getAccessToken({
