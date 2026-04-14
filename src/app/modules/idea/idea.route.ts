@@ -77,7 +77,7 @@ ideaRoutes.get(
  */
 ideaRoutes.get(
   "/access/:id",
-  checkAuth(Role.MEMBER, Role.ADMIN), // IMPORTANT
+  optionalAuth,
   IdeaController.getIdeaAccess,
 );
 

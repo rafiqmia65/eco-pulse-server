@@ -513,7 +513,7 @@ const getMyIdeas = async (userId: string, query: IQueryParams) => {
  * - Comments are included for all users who can access the idea
  */
 
-export const getIdeaAccess = async (
+const getIdeaAccess = async (
   ideaId: string,
   userId?: string,
   role?: Role,
@@ -540,9 +540,14 @@ export const getIdeaAccess = async (
     throw new AppError(404, "Idea not found");
   }
 
-  // 2. Block non-approved ideas
+  // 2. Access control for idea status (FIXED)
+  const isOwner = userId && idea.authorId === userId;
+  const isAdmin = role === Role.ADMIN;
+
   if (idea.status !== IdeaStatus.APPROVED) {
-    throw new AppError(403, "This idea is not publicly available");
+    if (!isOwner && !isAdmin) {
+      throw new AppError(403, "This idea is not publicly available");
+    }
   }
 
   // 3. COMMENTS (Admin-style QueryBuilder)
@@ -574,7 +579,7 @@ export const getIdeaAccess = async (
   // 4. Vote processing
   const voteData = getVoteData(idea.votes, userId);
 
-  // 5. Map comments (clean reusable format)
+  // 5. Map comments
   const comments = mapComments(commentsResult.data as any);
 
   // 6. Base response
@@ -597,7 +602,7 @@ export const getIdeaAccess = async (
   };
 
   // 7. ADMIN ACCESS
-  if (role === Role.ADMIN) {
+  if (isAdmin) {
     return {
       ...baseResponse,
       solution: idea.solution,
@@ -607,7 +612,6 @@ export const getIdeaAccess = async (
   }
 
   // 8. OWNER ACCESS
-  const isOwner = userId && idea.authorId === userId;
   if (isOwner) {
     return {
       ...baseResponse,
@@ -617,13 +621,13 @@ export const getIdeaAccess = async (
     };
   }
 
-  // 9. FREE IDEA (no payment needed)
+  // 9. FREE IDEA → Guest or Logged-in user
   if (!idea.isPaid) {
     return {
       ...baseResponse,
       solution: idea.solution,
       isLocked: false,
-      accessLevel: "PUBLIC_FREE",
+      accessLevel: userId ? "PUBLIC_FREE" : "PUBLIC_FREE_GUEST",
     };
   }
 
@@ -632,14 +636,14 @@ export const getIdeaAccess = async (
     (p) => p.userId === userId && p.status === PaymentStatus.PAID,
   );
 
-  // 11. LIMITED VIEW (not paid)
+  // 11. LIMITED VIEW (guest + unpaid user)
   if (!hasPaid) {
     return {
       ...baseResponse,
       description: truncateText(idea.description, 120),
       solution: "Unlock full solution by purchasing this idea",
       isLocked: true,
-      accessLevel: "LIMITED_PREVIEW",
+      accessLevel: userId ? "LIMITED_PREVIEW" : "GUEST_PREVIEW",
     };
   }
 
