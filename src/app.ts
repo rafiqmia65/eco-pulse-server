@@ -5,8 +5,15 @@ import indexRoutes from "./app/routes/indexRoutes";
 import { globalErrorHandler } from "./app/middlewares/globalErrorHandler";
 import notFound from "./app/middlewares/notFound";
 import cookieParser from "cookie-parser";
+import { PaymentController } from "./app/modules/payment/payment.controller";
 
 const app: Application = express();
+
+app.post(
+  "/webhook",
+  express.raw({ type: "application/json" }),
+  PaymentController.handleStripeWebhookEvent,
+);
 
 app.use(
   cors({

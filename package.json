@@ -10,7 +10,8 @@
     "build": "prisma generate && tsc && node scripts/fix-imports.js",
     "build:tsup": "tsup",
     "start": "node dist/server.js",
-    "postinstall": "prisma generate"
+    "postinstall": "prisma generate",
+    "stripe-webhook": "stripe listen --forward-to localhost:5000/webhook"
   },
   "type": "module",
   "keywords": [],
@@ -44,6 +45,7 @@
     "http-status": "^2.1.0",
     "jsonwebtoken": "^9.0.3",
     "pg": "^8.20.0",
+    "stripe": "^22.0.1",
     "uuid": "^13.0.0",
     "zod": "^4.3.6"
   }
