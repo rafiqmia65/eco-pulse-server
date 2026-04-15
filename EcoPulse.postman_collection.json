@@ -1,0 +1,297 @@
+{
+  "info": {
+    "name": "EcoPulse API",
+    "description": "Clean & structured API collection for EcoPulse platform",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Health Check",
+      "item": [
+        {
+          "name": "API Health Check",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/",
+              "host": ["{{baseUrl}}"],
+              "path": [""]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Register",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/v1/auth/register"
+          }
+        },
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/v1/auth/login"
+          }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/v1/auth/logout"
+          }
+        },
+        {
+          "name": "Get Me",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/v1/auth/me"
+          }
+        },
+        {
+          "name": "Change Password",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/v1/auth/change-password"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Users",
+      "item": [
+        {
+          "name": "Update Profile",
+          "request": {
+            "method": "PATCH",
+            "url": "{{baseUrl}}/api/v1/users/update-profile"
+          }
+        },
+        {
+          "name": "User Stats",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/v1/users/stats"
+          }
+        },
+        {
+          "name": "Get All Users (Admin)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/v1/users"
+          }
+        },
+        {
+          "name": "Make Admin",
+          "request": {
+            "method": "PATCH",
+            "url": "{{baseUrl}}/api/v1/users/make-admin/:userId"
+          }
+        },
+        {
+          "name": "Block User",
+          "request": {
+            "method": "PATCH",
+            "url": "{{baseUrl}}/api/v1/users/block/:userId"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Ideas",
+      "item": [
+        {
+          "name": "Get Ideas",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/v1/ideas"
+          }
+        },
+        {
+          "name": "Create Idea",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/v1/ideas"
+          }
+        },
+        {
+          "name": "Get Idea By ID",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/v1/ideas/:ideaId"
+          }
+        },
+        {
+          "name": "Update Idea",
+          "request": {
+            "method": "PUT",
+            "url": "{{baseUrl}}/api/v1/ideas/:ideaId"
+          }
+        },
+        {
+          "name": "Delete Idea",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/api/v1/ideas/:ideaId"
+          }
+        },
+        {
+          "name": "Vote Idea",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/v1/ideas/:ideaId/vote"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Categories",
+      "item": [
+        {
+          "name": "Get Categories",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/v1/categories"
+          }
+        },
+        {
+          "name": "Create Category",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/v1/categories"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Comments",
+      "item": [
+        {
+          "name": "Add Comment",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/v1/comments/:ideaId"
+          }
+        },
+        {
+          "name": "Update Comment",
+          "request": {
+            "method": "PUT",
+            "url": "{{baseUrl}}/api/v1/comments/:commentId"
+          }
+        },
+        {
+          "name": "Delete Comment",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/api/v1/comments/:commentId"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Watchlist",
+      "item": [
+        {
+          "name": "Toggle Watchlist",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/v1/watchlist/toggle/:ideaId"
+          }
+        },
+        {
+          "name": "Get Watchlist",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/v1/watchlist"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Payments",
+      "item": [
+        {
+          "name": "Create Payment Session",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/v1/payments/create-session"
+          }
+        },
+        {
+          "name": "My Payments",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/v1/payments/my-payments"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Admin",
+      "item": [
+        {
+          "name": "Admin Ideas",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/v1/admin/ideas"
+          }
+        },
+        {
+          "name": "Approve Idea",
+          "request": {
+            "method": "PATCH",
+            "url": "{{baseUrl}}/api/v1/admin/ideas/approve/:ideaId"
+          }
+        },
+        {
+          "name": "Reject Idea",
+          "request": {
+            "method": "PATCH",
+            "url": "{{baseUrl}}/api/v1/admin/ideas/reject/:ideaId"
+          }
+        },
+        {
+          "name": "Admin Stats",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/v1/admin/stats"
+          }
+        },
+        {
+          "name": "Admin Payments",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/v1/admin/payments"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Webhooks",
+      "item": [
+        {
+          "name": "Stripe Webhook",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/webhook"
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:5000"
+    },
+    {
+      "key": "authToken",
+      "value": ""
+    }
+  ]
+}
