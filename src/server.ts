@@ -1,11 +1,12 @@
 import { Server } from "http";
 import app from "./app";
+import { envVars } from "./app/config/env";
 
 let server: Server;
 const bootstrap = async () => {
   try {
     // await seedSuperAdmin();
-    const port = process.env.PORT || 5000;
+    const port = envVars.PORT || 5000;
 
     server = app.listen(port, () => {
       console.log(`Server is running on port ${port}`);
