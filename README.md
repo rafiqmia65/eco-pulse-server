@@ -393,9 +393,3 @@ ISC
 
 - Frontend: https://github.com/rafiqmia65/eco-pulse-client
 - Database Schema: https://dbdiagram.io/d/Eco-Pulse
-
-```
-
----
-
-```
