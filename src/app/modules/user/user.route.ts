@@ -27,6 +27,22 @@ UserRoutes.patch(
 UserRoutes.get("/stats", checkAuth(Role.MEMBER), UserController.getUserStats);
 
 /**
+ * @desc    Get all users (search, filter, pagination)
+ * @route   GET /api/v1/users
+ * @access  Admin only
+ *
+ * Query Examples:
+ *  ?searchTerm=John
+ *  ?role=ADMIN
+ *  ?role=MEMBER
+ *  ?status=ACTIVE
+ *  ?status=BLOCKED
+ *  ?status=DELETED
+ *  ?page=1&limit=10
+ */
+UserRoutes.get("/", checkAuth(Role.ADMIN), UserController.getAllUsers);
+
+/**
  * @desc    Promote user to admin
  * @route   PATCH /api/v1/users/make-admin/:id
  * @access  Admin only
@@ -61,21 +77,5 @@ UserRoutes.patch(
  * @access  Admin only
  */
 UserRoutes.get("/:id", checkAuth(Role.ADMIN), UserController.getUserById);
-
-/**
- * @desc    Get all users (search, filter, pagination)
- * @route   GET /api/v1/users
- * @access  Admin only
- *
- * Query Examples:
- *  ?searchTerm=John
- *  ?role=ADMIN
- *  ?role=MEMBER
- *  ?status=ACTIVE
- *  ?status=BLOCKED
- *  ?status=DELETED
- *  ?page=1&limit=10
- */
-UserRoutes.get("/", checkAuth(Role.ADMIN), UserController.getAllUsers);
 
 export default UserRoutes;

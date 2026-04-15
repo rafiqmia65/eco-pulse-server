@@ -62,7 +62,7 @@ adminRoutes.get("/stats", checkAuth(Role.ADMIN), AdminController.getAdminStats);
  * @access Private (Admin)
  */
 adminRoutes.get(
-  "/payments-admin",
+  "/payments",
   checkAuth(Role.ADMIN),
   AdminController.getAllPaymentsAdmin,
 );

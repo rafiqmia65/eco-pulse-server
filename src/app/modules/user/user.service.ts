@@ -2,7 +2,7 @@ import { prisma } from "../../lib/prisma";
 import status from "http-status";
 import AppError from "../../helpers/errorHelpers/AppError";
 import { IUpdateProfilePayload } from "./user.interface";
-import { UserStatus } from "../../../../generated/prisma/enums";
+import { Role, UserStatus } from "../../../../generated/prisma/enums";
 import { IQueryParams } from "../../interfaces/query.interface";
 import { QueryBuilder } from "../../utils/QueryBuilder";
 
@@ -399,18 +399,53 @@ const getUserById = async (userId: string) => {
  */
 const getAllUsers = async (query: IQueryParams) => {
   const queryBuilder = new QueryBuilder(prisma.user, query, {
-    searchableFields: ["name", "email"], // search
-    filterableFields: ["role", "status"], // filter
+    searchableFields: ["name", "email"],
+    filterableFields: ["role", "status"],
   });
 
   const result = await queryBuilder
-    .search() // name, email search
-    .filter() // role, status filter
-    .sort() // sorting
-    .paginate() // pagination
+    .search()
+    .filter()
+    .sort()
+    .paginate()
     .execute();
 
-  return result;
+  // =========================
+  // USERS STATS (ADMIN DASHBOARD)
+  // =========================
+  const [totalUsers, activeUsers, blockedUsers, adminUsers, memberUsers] =
+    await Promise.all([
+      prisma.user.count(),
+      prisma.user.count({
+        where: { status: UserStatus.ACTIVE },
+      }),
+      prisma.user.count({
+        where: { status: UserStatus.BLOCKED },
+      }),
+      prisma.user.count({
+        where: { role: Role.ADMIN },
+      }),
+      prisma.user.count({
+        where: { role: Role.MEMBER },
+      }),
+    ]);
+
+  const stats = {
+    totalUsers,
+    activeUsers,
+    blockedUsers,
+    adminUsers,
+    memberUsers,
+  };
+
+  // ✅ FINAL RETURN (data এর ভিতরে users + stats)
+  return {
+    meta: result.meta,
+    data: {
+      users: result.data,
+      stats,
+    },
+  };
 };
 
 export const UserService = {
