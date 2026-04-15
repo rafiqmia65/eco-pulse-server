@@ -49,4 +49,11 @@ adminRoutes.get(
   AdminController.getSingleIdea,
 );
 
+/**
+ * @desc Admin Dashboard Stats
+ * @route GET /api/v1/admin/stats
+ * @access Private (Admin)
+ */
+adminRoutes.get("/stats", checkAuth(Role.ADMIN), AdminController.getAdminStats);
+
 export default adminRoutes;

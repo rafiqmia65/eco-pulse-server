@@ -224,9 +224,239 @@ const getSingleIdea = async (ideaId: string, page: number, limit: number) => {
   };
 };
 
+/**
+ * @desc Get admin dashboard statistics
+ */
+const getAdminStats = async () => {
+  // =========================
+  // USER STATS
+  // =========================
+  const totalUsers = await prisma.user.count();
+
+  const activeUsers = await prisma.user.count({
+    where: { status: "ACTIVE" },
+  });
+
+  const blockedUsers = await prisma.user.count({
+    where: { status: "BLOCKED" },
+  });
+
+  // =========================
+  // IDEA STATS
+  // =========================
+  const totalIdeas = await prisma.idea.count();
+
+  const approvedIdeas = await prisma.idea.count({
+    where: { status: "APPROVED" },
+  });
+
+  const reviewIdeas = await prisma.idea.count({
+    where: { status: "REVIEW" },
+  });
+
+  const rejectedIdeas = await prisma.idea.count({
+    where: { status: "REJECTED" },
+  });
+
+  const draftIdeas = await prisma.idea.count({
+    where: { status: "DRAFT" },
+  });
+
+  const paidIdeas = await prisma.idea.count({
+    where: { isPaid: true },
+  });
+
+  const freeIdeas = await prisma.idea.count({
+    where: { isPaid: false },
+  });
+
+  // =========================
+  // PAYMENT STATS
+  // =========================
+  const totalPayments = await prisma.payment.count();
+
+  const successfulPayments = await prisma.payment.count({
+    where: { status: "PAID" },
+  });
+
+  const pendingPayments = await prisma.payment.count({
+    where: { status: "PENDING" },
+  });
+
+  const failedPayments = await prisma.payment.count({
+    where: { status: "FAILED" },
+  });
+
+  // 💰 Revenue
+  const revenueData = await prisma.payment.aggregate({
+    _sum: { amount: true },
+    where: { status: "PAID" },
+  });
+
+  const totalRevenue = revenueData._sum.amount || 0;
+
+  // =========================
+  // 📊 LAST 7 DAYS DATA
+  // =========================
+  const last7Days = [...Array(7)]
+    .map((_, i) => {
+      const date = new Date();
+      date.setDate(date.getDate() - i);
+
+      return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+    })
+    .reverse();
+
+  // Revenue per day
+  const revenueByDay = await Promise.all(
+    last7Days.map(async (date) => {
+      const nextDay = new Date(date);
+      nextDay.setDate(date.getDate() + 1);
+
+      const data = await prisma.payment.aggregate({
+        _sum: { amount: true },
+        where: {
+          status: "PAID",
+          createdAt: {
+            gte: date,
+            lt: nextDay,
+          },
+        },
+      });
+
+      return {
+        date: date.toISOString().split("T")[0], // "2026-04-15"
+        amount: data._sum.amount || 0,
+      };
+    }),
+  );
+
+  // Ideas created per day
+  const ideasByDay = await Promise.all(
+    last7Days.map(async (date) => {
+      const nextDay = new Date(date);
+      nextDay.setDate(date.getDate() + 1);
+
+      const count = await prisma.idea.count({
+        where: {
+          createdAt: {
+            gte: date,
+            lt: nextDay,
+          },
+        },
+      });
+
+      return {
+        date,
+        count,
+      };
+    }),
+  );
+
+  // =========================
+  // 🏆 TOP IDEAS
+  // =========================
+
+  // 🔥 Top Voted Ideas
+  const topVotedIdeas = await prisma.idea.findMany({
+    where: { status: "APPROVED" },
+    orderBy: {
+      votesCount: "desc",
+    },
+    take: 5,
+    select: {
+      id: true,
+      title: true,
+      votesCount: true,
+      image: true,
+      slug: true,
+    },
+  });
+
+  // 💰 Most Purchased Ideas
+  const mostPurchasedIdeas = await prisma.payment.groupBy({
+    by: ["ideaId"],
+    _count: {
+      ideaId: true,
+    },
+    where: {
+      status: "PAID",
+    },
+    orderBy: {
+      _count: {
+        ideaId: "desc",
+      },
+    },
+    take: 5,
+  });
+
+  // Fetch idea details for purchased ideas
+  const purchasedIdeasDetails = await Promise.all(
+    mostPurchasedIdeas.map(async (item) => {
+      const idea = await prisma.idea.findUnique({
+        where: { id: item.ideaId },
+        select: {
+          id: true,
+          title: true,
+          image: true,
+          slug: true,
+        },
+      });
+
+      return {
+        ...idea,
+        purchaseCount: item._count.ideaId,
+      };
+    }),
+  );
+
+  // =========================
+  // FINAL RESPONSE
+  // =========================
+  return {
+    users: {
+      total: totalUsers,
+      active: activeUsers,
+      blocked: blockedUsers,
+    },
+
+    ideas: {
+      total: totalIdeas,
+      approved: approvedIdeas,
+      review: reviewIdeas,
+      rejected: rejectedIdeas,
+      draft: draftIdeas,
+      paid: paidIdeas,
+      free: freeIdeas,
+    },
+
+    payments: {
+      total: totalPayments,
+      success: successfulPayments,
+      pending: pendingPayments,
+      failed: failedPayments,
+    },
+
+    revenue: {
+      total: totalRevenue,
+      last7Days: revenueByDay,
+    },
+
+    charts: {
+      ideasLast7Days: ideasByDay,
+    },
+
+    topIdeas: {
+      mostVoted: topVotedIdeas,
+      mostPurchased: purchasedIdeasDetails,
+    },
+  };
+};
+
 export const AdminService = {
   getSingleIdea,
   getAllIdeasAdmin,
   rejectIdea,
   approveIdea,
+  getAdminStats,
 };

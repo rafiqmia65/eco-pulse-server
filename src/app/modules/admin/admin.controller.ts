@@ -90,9 +90,26 @@ const getSingleIdea = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+/**
+ * @desc Get admin dashboard stats
+ * @route GET /api/v1/admin/stats
+ * @access Private (Admin)
+ */
+const getAdminStats = catchAsync(async (req: Request, res: Response) => {
+  const result = await AdminService.getAdminStats();
+
+  sendResponse(res, {
+    httpStatusCode: status.OK,
+    success: true,
+    message: "Admin stats fetched successfully",
+    data: result,
+  });
+});
+
 export const AdminController = {
   getSingleIdea,
   getAllIdeasAdmin,
   rejectIdea,
   approveIdea,
+  getAdminStats,
 };
