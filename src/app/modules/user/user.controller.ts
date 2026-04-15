@@ -30,6 +30,24 @@ const updateProfile = catchAsync(async (req: Request, res: Response) => {
 });
 
 /**
+ * @desc Get logged-in user stats
+ * @route GET /api/v1/users/stats
+ * @access Private (Member)
+ */
+const getUserStats = catchAsync(async (req: Request, res: Response) => {
+  const userId = req.user?.userId;
+
+  const result = await UserService.getUserStats(userId as string);
+
+  sendResponse(res, {
+    httpStatusCode: status.OK,
+    success: true,
+    message: "User stats fetched successfully",
+    data: result,
+  });
+});
+
+/**
  * @desc    Promote user to admin
  * @route   PATCH /api/v1/users/make-admin/:id
  * @access  Admin only
@@ -127,4 +145,5 @@ export const UserController = {
   unblockUser,
   getUserById,
   getAllUsers,
+  getUserStats,
 };

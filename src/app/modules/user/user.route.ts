@@ -20,6 +20,13 @@ UserRoutes.patch(
 );
 
 /**
+ * @desc Get user dashboard stats
+ * @route GET /api/v1/users/stats
+ * @access Private (Member)
+ */
+UserRoutes.get("/stats", checkAuth(Role.MEMBER), UserController.getUserStats);
+
+/**
  * @desc    Promote user to admin
  * @route   PATCH /api/v1/users/make-admin/:id
  * @access  Admin only

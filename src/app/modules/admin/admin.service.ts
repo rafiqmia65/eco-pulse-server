@@ -287,7 +287,7 @@ const getAdminStats = async () => {
     where: { status: "FAILED" },
   });
 
-  // 💰 Revenue
+  // Revenue
   const revenueData = await prisma.payment.aggregate({
     _sum: { amount: true },
     where: { status: "PAID" },
@@ -296,7 +296,7 @@ const getAdminStats = async () => {
   const totalRevenue = revenueData._sum.amount || 0;
 
   // =========================
-  // 📊 LAST 7 DAYS DATA
+  // LAST 7 DAYS DATA
   // =========================
   const last7Days = [...Array(7)]
     .map((_, i) => {
@@ -354,10 +354,10 @@ const getAdminStats = async () => {
   );
 
   // =========================
-  // 🏆 TOP IDEAS
+  // TOP IDEAS
   // =========================
 
-  // 🔥 Top Voted Ideas
+  // Top Voted Ideas
   const topVotedIdeas = await prisma.idea.findMany({
     where: { status: "APPROVED" },
     orderBy: {
@@ -373,7 +373,7 @@ const getAdminStats = async () => {
     },
   });
 
-  // 💰 Most Purchased Ideas
+  // Most Purchased Ideas
   const mostPurchasedIdeas = await prisma.payment.groupBy({
     by: ["ideaId"],
     _count: {
