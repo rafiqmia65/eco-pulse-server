@@ -106,10 +106,33 @@ const getAdminStats = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+/**
+ * @desc Admin: Get all payments with stats
+ * @route GET /api/v1/admin/payments
+ * @access Private (Admin)
+ */
+const getAllPaymentsAdmin = catchAsync(async (req: Request, res: Response) => {
+  const result = await AdminService.getAllPaymentsAdmin(
+    req.query as IQueryParams,
+  );
+
+  sendResponse(res, {
+    httpStatusCode: status.OK,
+    success: true,
+    message: "All payments fetched successfully",
+    data: {
+      payments: result.data,
+      stats: result.stats,
+    },
+    meta: result.meta,
+  });
+});
+
 export const AdminController = {
   getSingleIdea,
   getAllIdeasAdmin,
   rejectIdea,
   approveIdea,
   getAdminStats,
+  getAllPaymentsAdmin,
 };

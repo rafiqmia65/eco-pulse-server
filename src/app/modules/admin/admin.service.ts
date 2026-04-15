@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { IdeaStatus } from "../../../../generated/prisma/enums";
+import { IdeaStatus, PaymentStatus } from "../../../../generated/prisma/enums";
 import AppError from "../../helpers/errorHelpers/AppError";
 import { IQueryParams } from "../../interfaces/query.interface";
 import { prisma } from "../../lib/prisma";
@@ -453,10 +453,185 @@ const getAdminStats = async () => {
   };
 };
 
+/**
+ * @desc Admin payment analytics + history
+ * @route GET /api/v1/admin/payments
+ * @access Private (Admin)
+ */
+const getAllPaymentsAdmin = async (query: IQueryParams) => {
+  const queryBuilder = new QueryBuilder<any, any, any>(prisma.payment, query, {
+    searchableFields: ["transactionId", "user.name", "idea.title"],
+    filterableFields: ["status", "gateway", "user.name", "idea.title"],
+  });
+
+  const paymentsResult = await queryBuilder
+    .search()
+    .filter()
+    .sort()
+    .paginate()
+    .include({
+      user: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          image: true,
+        },
+      },
+      idea: {
+        select: {
+          id: true,
+          title: true,
+          price: true,
+          slug: true,
+          category: {
+            select: { name: true },
+          },
+        },
+      },
+    })
+    .execute();
+
+  const { data: payments, meta } = paymentsResult;
+
+  // ======================
+  // GLOBAL STATS (FAST GROUP BY)
+  // ======================
+  const stats = await prisma.payment.groupBy({
+    by: ["status"],
+    _count: { status: true },
+    _sum: { amount: true },
+  });
+
+  const getCount = (st: PaymentStatus) =>
+    stats.find((s) => s.status === st)?._count.status ?? 0;
+
+  const getSum = (st: PaymentStatus) =>
+    stats.find((s) => s.status === st)?._sum.amount ?? 0;
+
+  const totalRevenue = getSum(PaymentStatus.PAID);
+  const successfulPayments = getCount(PaymentStatus.PAID);
+  const failedPayments = getCount(PaymentStatus.FAILED);
+  const pendingPayments = getCount(PaymentStatus.PENDING);
+
+  const totalTransactions = stats.reduce(
+    (acc, cur) => acc + (cur._count.status ?? 0),
+    0,
+  );
+
+  // ======================
+  // LAST 7 DAYS REVENUE (CHART)
+  // ======================
+  const sevenDaysAgo = new Date();
+  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6);
+
+  const revenueRaw = await prisma.payment.findMany({
+    where: {
+      status: PaymentStatus.PAID,
+      createdAt: { gte: sevenDaysAgo },
+    },
+    select: {
+      amount: true,
+      createdAt: true,
+    },
+  });
+
+  const revenueMap: Record<string, number> = {};
+
+  revenueRaw.forEach((p) => {
+    const date = p.createdAt.toISOString().split("T")[0]!;
+    revenueMap[date] = (revenueMap[date] || 0) + p.amount;
+  });
+
+  const revenueChart = Array.from({ length: 7 }).map((_, i) => {
+    const d = new Date();
+    d.setDate(d.getDate() - (6 - i));
+    const date = d.toISOString().split("T")[0]!;
+
+    return {
+      date,
+      revenue: revenueMap[date] || 0,
+    };
+  });
+
+  // ======================
+  // TOP IDEAS (MOST PURCHASED)
+  // ======================
+  const topIdeas = await prisma.payment.groupBy({
+    by: ["ideaId"],
+    where: {
+      status: PaymentStatus.PAID,
+    },
+    _count: {
+      ideaId: true,
+    },
+    orderBy: {
+      _count: {
+        ideaId: "desc",
+      },
+    },
+    take: 5,
+  });
+
+  const ideaIds = topIdeas.map((i) => i.ideaId);
+
+  const ideas = await prisma.idea.findMany({
+    where: { id: { in: ideaIds } },
+    select: {
+      id: true,
+      title: true,
+    },
+  });
+
+  const topIdeasDetails = topIdeas.map((t) => ({
+    ideaId: t.ideaId,
+    title: ideas.find((i) => i.id === t.ideaId)?.title || "Unknown",
+    purchases: t._count.ideaId,
+  }));
+
+  const formattedData = payments.map((p) => ({
+    paymentId: p.id,
+    transactionId: p.transactionId,
+    amount: p.amount,
+    status: p.status,
+    gateway: p.gateway,
+    paidAt: p.paidAt,
+    createdAt: p.createdAt,
+    user: {
+      id: p.user.id,
+      name: p.user.name,
+      email: p.user.email,
+      image: p.user.image,
+    },
+    idea: {
+      id: p.idea.id,
+      title: p.idea.title,
+      price: p.idea.price,
+      slug: p.idea.slug,
+      category: p.idea.category?.name,
+    },
+  }));
+
+  return {
+    meta,
+    stats: {
+      totalRevenue,
+      totalTransactions,
+      successfulPayments,
+      failedPayments,
+      pendingPayments,
+      revenueChart,
+      topIdeas: topIdeasDetails,
+    },
+    data: formattedData,
+  };
+};
+
 export const AdminService = {
   getSingleIdea,
   getAllIdeasAdmin,
   rejectIdea,
   approveIdea,
   getAdminStats,
+  getAllPaymentsAdmin,
 };

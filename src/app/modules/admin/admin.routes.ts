@@ -56,4 +56,15 @@ adminRoutes.get(
  */
 adminRoutes.get("/stats", checkAuth(Role.ADMIN), AdminController.getAdminStats);
 
+/**
+ * @desc Admin: Get all payments with stats
+ * @route GET /api/v1/admin/payments
+ * @access Private (Admin)
+ */
+adminRoutes.get(
+  "/payments-admin",
+  checkAuth(Role.ADMIN),
+  AdminController.getAllPaymentsAdmin,
+);
+
 export default adminRoutes;
