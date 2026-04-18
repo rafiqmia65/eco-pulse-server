@@ -22,6 +22,13 @@ AuthRoutes.post("/register", AuthController.registerUser);
 AuthRoutes.post("/login", AuthController.loginUser);
 
 /**
+ * @route   POST /api/v1/auth/refresh-token
+ * @desc    Generate new access & refresh tokens using refresh token
+ * @access  Public (requires valid cookies)
+ */
+AuthRoutes.post("/refresh-token", AuthController.getNewToken);
+
+/**
  * @route   POST /api/v1/auth/logout
  * @desc    Logout user and invalidate session
  * @access  Private

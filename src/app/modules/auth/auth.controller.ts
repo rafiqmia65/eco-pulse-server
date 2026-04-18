@@ -5,6 +5,7 @@ import { AuthService } from "./auth.service";
 import { catchAsync } from "../../shared/catchAsync";
 import { tokenUtils } from "../../utils/token";
 import { CookieUtils } from "../../utils/cookie";
+import AppError from "../../helpers/errorHelpers/AppError";
 
 /**
  * @desc    Register a new user
@@ -54,6 +55,40 @@ const loginUser = catchAsync(async (req: Request, res: Response) => {
       accessToken: result.accessToken,
       refreshToken: result.refreshToken,
       user: result.user,
+    },
+  });
+});
+
+/**
+ * @route   POST /api/v1/auth/refresh-token
+ * @desc    Generate new access & refresh tokens using refresh token
+ * @access  Public (requires valid cookies)
+ */
+const getNewToken = catchAsync(async (req: Request, res: Response) => {
+  const refreshToken = req.cookies.refreshToken;
+  const betterAuthSessionToken = req.cookies["better-auth.session_token"];
+  if (!refreshToken) {
+    throw new AppError(status.UNAUTHORIZED, "Refresh token is missing");
+  }
+  const result = await AuthService.getNewToken(
+    refreshToken,
+    betterAuthSessionToken,
+  );
+
+  const { accessToken, refreshToken: newRefreshToken, sessionToken } = result;
+
+  tokenUtils.setAccessTokenCookie(res, accessToken);
+  tokenUtils.setRefreshTokenCookie(res, newRefreshToken);
+  tokenUtils.setBetterAuthSessionCookie(res, sessionToken);
+
+  sendResponse(res, {
+    httpStatusCode: status.OK,
+    success: true,
+    message: "New tokens generated successfully",
+    data: {
+      accessToken,
+      refreshToken: newRefreshToken,
+      sessionToken,
     },
   });
 });
@@ -140,6 +175,7 @@ const changePassword = catchAsync(async (req: Request, res: Response) => {
 export const AuthController = {
   registerUser,
   loginUser,
+  getNewToken,
   logoutUser,
   getMe,
   changePassword,
