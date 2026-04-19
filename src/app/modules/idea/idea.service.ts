@@ -773,22 +773,19 @@ const getLatestIdeas = async (userId?: string) => {
 };
 
 /**
- * Get trending ideas for homepage (Bonus)
- * - Trending = most votes + comments in last 7 days
+ * Get trending ideas for homepage (Overall Trending)
+ * - Trending = engagement-based ranking (votes + comments + watchlist)
  * @desc Get trending ideas for homepage
  * @route GET /api/v1/ideas/trending
  * @access Public
  */
 const getTrendingIdeas = async (userId?: string) => {
-  const sevenDaysAgo = new Date();
-  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-
+  // -----------------------------
+  // 1. FETCH ALL APPROVED IDEAS
+  // -----------------------------
   const ideas = await prisma.idea.findMany({
     where: {
       status: IdeaStatus.APPROVED,
-      createdAt: {
-        gte: sevenDaysAgo,
-      },
     },
     include: {
       author: {
@@ -804,19 +801,35 @@ const getTrendingIdeas = async (userId?: string) => {
   });
 
   // -----------------------------
-  // ENGAGEMENT CALCULATION
+  // 2. RANKING BY ENGAGEMENT SCORE
   // -----------------------------
   const rankedIdeas = ideas
-    .map((idea: any) => ({
-      ...idea,
-      engagementScore:
-        idea.votesCount * 3 + idea.commentsCount * 2 + idea.watchListCount * 4,
-    }))
+    .map((idea: any) => {
+      const upvotes = idea.votes.filter((v: any) => v.value === 1).length;
+      const downvotes = idea.votes.filter((v: any) => v.value === -1).length;
+
+      // net vote score
+      const votesScore = upvotes * 2 - downvotes * 1;
+
+      // engagement formula (you can tune later)
+      const engagementScore =
+        votesScore * 3 +
+        (idea.commentsCount || 0) * 2 +
+        (idea.watchListCount || 0) * 4;
+
+      return {
+        ...idea,
+        upvotes,
+        downvotes,
+        votesCount: votesScore,
+        engagementScore,
+      };
+    })
     .sort((a, b) => b.engagementScore - a.engagementScore)
     .slice(0, 6);
 
   // -----------------------------
-  // TRANSFORM RESPONSE
+  // 3. TRANSFORM RESPONSE
   // -----------------------------
   const modifiedData = rankedIdeas.map((idea: any) => {
     const shortDescription =
@@ -835,15 +848,7 @@ const getTrendingIdeas = async (userId?: string) => {
     }
 
     // -----------------------------
-    // VOTE STATS
-    // -----------------------------
-    const upvotes = idea.votes.filter((v: any) => v.value === 1).length;
-    const downvotes = idea.votes.filter((v: any) => v.value === -1).length;
-
-    const votesCount = upvotes - downvotes;
-
-    // -----------------------------
-    // PAID IDEA
+    // PAID IDEA HANDLING
     // -----------------------------
     if (idea.isPaid) {
       return {
@@ -856,9 +861,9 @@ const getTrendingIdeas = async (userId?: string) => {
         price: idea.price,
         isPaid: idea.isPaid,
 
-        upvotes,
-        downvotes,
-        votesCount,
+        upvotes: idea.upvotes,
+        downvotes: idea.downvotes,
+        votesCount: idea.votesCount,
         currentUserVote,
 
         commentsCount: idea.commentsCount,
@@ -869,7 +874,7 @@ const getTrendingIdeas = async (userId?: string) => {
     }
 
     // -----------------------------
-    // FREE IDEA
+    // FREE IDEA HANDLING
     // -----------------------------
     const shortSolution =
       idea.solution?.length > 50
@@ -886,9 +891,9 @@ const getTrendingIdeas = async (userId?: string) => {
       price: idea.price,
       isPaid: idea.isPaid,
 
-      upvotes,
-      downvotes,
-      votesCount,
+      upvotes: idea.upvotes,
+      downvotes: idea.downvotes,
+      votesCount: idea.votesCount,
       currentUserVote,
 
       commentsCount: idea.commentsCount,
