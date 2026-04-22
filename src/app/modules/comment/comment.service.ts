@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { prisma } from "../../lib/prisma";
 import AppError from "../../helpers/errorHelpers/AppError";
 import {
@@ -9,6 +10,42 @@ import {
   ICreateCommentPayload,
   IUpdateCommentPayload,
 } from "./comment.interface";
+import { QueryBuilder } from "../../utils/QueryBuilder";
+
+/**
+ * GET COMMENTS WITH PAGINATION
+ */
+const getIdeaComments = async (ideaId: string, page: number, limit: number) => {
+  const result = await new QueryBuilder(prisma.comment as any, {
+    page: String(page),
+    limit: String(limit),
+    sortBy: "createdAt",
+    sortOrder: "desc",
+  })
+    .paginate()
+    .sort()
+    .where({
+      ideaId,
+      parentId: null, // only root comments
+    })
+    .include({
+      user: true,
+      replies: {
+        include: {
+          user: true,
+        },
+        orderBy: {
+          createdAt: "asc",
+        },
+      },
+    })
+    .execute();
+
+  return {
+    comments: result.data,
+    commentsMeta: result.meta,
+  };
+};
 
 /*
  * ============================================
@@ -221,6 +258,7 @@ const restoreComment = async (
 };
 
 export const CommentService = {
+  getIdeaComments,
   createComment,
   updateComment,
   deleteComment,

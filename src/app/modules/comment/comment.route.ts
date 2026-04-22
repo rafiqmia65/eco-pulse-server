@@ -8,6 +8,13 @@ import { CommentController } from "./comment.controller";
 const CommentRoutes: Router = Router();
 
 /**
+ * @desc    Get Idea Comments
+ * @route   GET /api/v1/comments/:ideaId
+ * @access  Public
+ */
+CommentRoutes.get("/:ideaId", CommentController.getIdeaComments);
+
+/**
  * @desc Create comment / reply
  * @route POST /api/v1/comments/:ideaId
  * @access Private (Member, Admin)

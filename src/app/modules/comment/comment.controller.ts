@@ -10,6 +10,31 @@ import {
 } from "./comment.interface";
 
 /**
+ * @desc    Get Idea Comments
+ * @route   GET /api/v1/comments/:ideaId
+ * @access  Public
+ */
+const getIdeaComments = catchAsync(async (req: Request, res: Response) => {
+  const { ideaId } = req.params;
+
+  const page = Number(req.query.page || 1);
+  const limit = Number(req.query.limit || 5);
+
+  const result = await CommentService.getIdeaComments(
+    ideaId as string,
+    page,
+    limit,
+  );
+
+  sendResponse(res, {
+    httpStatusCode: status.OK,
+    success: true,
+    message: "Comments fetched successfully",
+    data: result,
+  });
+});
+
+/**
  * @desc    Create a new comment or reply on an idea
  * @route   POST /api/v1/comments/:ideaId
  * @access  Private (Member, Admin)
@@ -151,6 +176,7 @@ const restoreComment = catchAsync(async (req: Request, res: Response) => {
 });
 
 export const CommentController = {
+  getIdeaComments,
   createComment,
   updateComment,
   deleteComment,
