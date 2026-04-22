@@ -513,14 +513,7 @@ const getMyIdeas = async (userId: string, query: IQueryParams) => {
  * - Comments are included for all users who can access the idea
  */
 
-const getIdeaAccess = async (
-  ideaId: string,
-  userId?: string,
-  role?: Role,
-  page = 1,
-  limit = 5,
-) => {
-  // 1. Fetch idea
+const getIdeaAccess = async (ideaId: string, userId?: string, role?: Role) => {
   const idea = await prisma.idea.findUnique({
     where: { id: ideaId },
     include: {
@@ -540,7 +533,6 @@ const getIdeaAccess = async (
     throw new AppError(404, "Idea not found");
   }
 
-  // 2. Access control for idea status (FIXED)
   const isOwner = userId && idea.authorId === userId;
   const isAdmin = role === Role.ADMIN;
 
@@ -550,39 +542,8 @@ const getIdeaAccess = async (
     }
   }
 
-  // 3. COMMENTS (Admin-style QueryBuilder)
-  const commentsResult = await new QueryBuilder(prisma.comment as any, {
-    page: String(page),
-    limit: String(limit),
-    sortBy: "createdAt",
-    sortOrder: "desc",
-  })
-    .paginate()
-    .sort()
-    .where({
-      ideaId: idea.id,
-      parentId: null,
-    })
-    .include({
-      user: true,
-      replies: {
-        include: {
-          user: true,
-        },
-        orderBy: {
-          createdAt: "asc",
-        },
-      },
-    })
-    .execute();
-
-  // 4. Vote processing
   const voteData = getVoteData(idea.votes, userId);
 
-  // 5. Map comments
-  const comments = mapComments(commentsResult.data as any);
-
-  // 6. Base response
   const baseResponse = {
     id: idea.id,
     title: idea.title,
@@ -593,15 +554,11 @@ const getIdeaAccess = async (
 
     ...voteData,
 
-    comments,
-    commentsMeta: commentsResult.meta,
-
     category: idea.category,
     author: idea.author,
     createdAt: idea.createdAt,
   };
 
-  // 7. ADMIN ACCESS
   if (isAdmin) {
     return {
       ...baseResponse,
@@ -611,7 +568,6 @@ const getIdeaAccess = async (
     };
   }
 
-  // 8. OWNER ACCESS
   if (isOwner) {
     return {
       ...baseResponse,
@@ -621,7 +577,6 @@ const getIdeaAccess = async (
     };
   }
 
-  // 9. FREE IDEA → Guest or Logged-in user
   if (!idea.isPaid) {
     return {
       ...baseResponse,
@@ -631,12 +586,10 @@ const getIdeaAccess = async (
     };
   }
 
-  // 10. PAID CHECK
   const hasPaid = idea.payments.some(
     (p) => p.userId === userId && p.status === PaymentStatus.PAID,
   );
 
-  // 11. LIMITED VIEW (guest + unpaid user)
   if (!hasPaid) {
     return {
       ...baseResponse,
@@ -647,7 +600,6 @@ const getIdeaAccess = async (
     };
   }
 
-  // 12. PAID USER FULL ACCESS
   return {
     ...baseResponse,
     solution: idea.solution,

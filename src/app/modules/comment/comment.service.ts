@@ -11,6 +11,7 @@ import {
   IUpdateCommentPayload,
 } from "./comment.interface";
 import { QueryBuilder } from "../../utils/QueryBuilder";
+import { mapComments } from "../idea/idea.helpers";
 
 /**
  * GET COMMENTS WITH PAGINATION
@@ -26,7 +27,7 @@ const getIdeaComments = async (ideaId: string, page: number, limit: number) => {
     .sort()
     .where({
       ideaId,
-      parentId: null, // only root comments
+      parentId: null,
     })
     .include({
       user: true,
@@ -41,12 +42,14 @@ const getIdeaComments = async (ideaId: string, page: number, limit: number) => {
     })
     .execute();
 
+  // same mapping like before
+  const comments = mapComments(result.data as any);
+
   return {
-    comments: result.data,
+    comments,
     commentsMeta: result.meta,
   };
 };
-
 /*
  * ============================================
  * CREATE COMMENT / REPLY
