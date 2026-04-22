@@ -75,3 +75,5 @@ process.on("unhandledRejection", (error) => {
 if (!process.env.VERCEL) {
   bootstrap();
 }
+
+export default app;
