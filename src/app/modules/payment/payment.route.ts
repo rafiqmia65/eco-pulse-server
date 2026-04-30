@@ -28,7 +28,7 @@ PaymentRoutes.get(
 );
 
 /** * @desc Handle Stripe webhook events for payment processing
- * @route POST /api/payments/webhook
+ * @route POST /api/v1/payments/idea/:ideaId
  * @access Public (Stripe will call this endpoint)
  */
 PaymentRoutes.post(

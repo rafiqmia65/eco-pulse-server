@@ -123,7 +123,7 @@ const getAllIdeas = async (query: IQueryParams & { userId?: string }) => {
     .include({
       author: true,
       category: true,
-      votes: true, // 🔥 IMPORTANT (added)
+      votes: true, // IMPORTANT (added)
     });
 
   // override sorting
@@ -339,7 +339,7 @@ const updateIdea = async (
     updateData.price = null;
   }
 
-  // Step 8: 🔥 Status Transition Logic (MAIN PART)
+  // Step 8: Status Transition Logic (MAIN PART)
   if (payload.isDraft === true) {
     // user wants to save as draft again
     updateData.status = IdeaStatus.DRAFT;
@@ -549,6 +549,7 @@ const getIdeaAccess = async (ideaId: string, userId?: string, role?: Role) => {
     title: idea.title,
     description: idea.description,
     image: idea.image,
+    problem: idea.problem,
     price: idea.price,
     isPaid: idea.isPaid,
 

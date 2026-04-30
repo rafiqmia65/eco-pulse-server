@@ -9,12 +9,6 @@ import { PaymentController } from "./app/modules/payment/payment.controller";
 
 const app: Application = express();
 
-app.post(
-  "/webhook",
-  express.raw({ type: "application/json" }),
-  PaymentController.handleStripeWebhookEvent,
-);
-
 app.use(
   cors({
     origin: [
@@ -29,7 +23,11 @@ app.use(
   }),
 );
 
-// app.all("/api/auth/*splat", toNodeHandler(auth));
+app.post(
+  "/api/v1/payments/webhook",
+  express.raw({ type: "application/json" }),
+  PaymentController.handleStripeWebhookEvent,
+);
 
 // Middleware to parse JSON bodies
 app.use(express.json());

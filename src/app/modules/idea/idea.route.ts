@@ -82,7 +82,7 @@ ideaRoutes.get(
 );
 
 /**
- * @desc Get latest 8 approved ideas for homepage
+ * @desc Get latest 6 approved ideas for homepage
  * @route GET /api/v1/ideas/latest
  * @access Public
  */
