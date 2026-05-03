@@ -8,6 +8,8 @@ import {
 } from "../../../../generated/prisma/enums";
 import { QueryBuilder } from "../../utils/QueryBuilder";
 import { IQueryParams } from "../../interfaces/query.interface";
+import { getVoteData, truncateText } from "../idea/idea.helpers";
+
 
 /* 
  *@desc Toggle vote (upvote/downvote) for an idea
@@ -172,6 +174,18 @@ const getMyVotedIdeas = async (userId: string, query: IQueryParams) => {
         include: {
           author: true,
           category: true,
+          votes: true,
+          watchLists: {
+            where: {
+              userId,
+            },
+          },
+          payments: {
+            where: {
+              userId,
+              status: PaymentStatus.PAID,
+            },
+          },
         },
       },
     })
@@ -179,6 +193,85 @@ const getMyVotedIdeas = async (userId: string, query: IQueryParams) => {
       userId, // logged user filter
     })
     .execute();
+
+  // ==============================
+  // DATA TRANSFORMATION
+  // ==============================
+  const modifiedData = result.data.map((vote: any) => {
+    const idea = vote.idea;
+
+    // -----------------------------
+    // VOTE & ACCESS CALCULATION
+    // -----------------------------
+    const { upvotes, downvotes, votesCount } = getVoteData(idea.votes, userId);
+
+    const isWatchlisted = idea.watchLists.length > 0;
+    const hasPurchased = idea.payments.length > 0;
+    const isOwner = idea.authorId === userId;
+
+    const shortDescription = truncateText(idea.description, 100);
+
+    // -----------------------------
+    // PAID CONTENT LOGIC
+    // -----------------------------
+    if (idea.isPaid && !hasPurchased && !isOwner) {
+      return {
+        id: idea.id,
+        title: idea.title,
+        description: shortDescription,
+        solution: "Unlock full solution by purchasing this idea",
+        isLocked: true,
+        image: idea.image,
+        price: idea.price,
+        isPaid: idea.isPaid,
+
+        upvotes,
+        downvotes,
+        votesCount,
+        currentUserVote: vote.value,
+
+        commentsCount: idea.commentsCount,
+        watchListCount: idea.watchListCount,
+        isWatchlisted,
+        hasPurchased,
+        isOwner,
+        category: idea.category,
+        author: idea.author,
+        createdAt: idea.createdAt,
+      };
+    }
+
+    // -----------------------------
+    // FREE OR PURCHASED CONTENT
+    // -----------------------------
+    const shortSolution = truncateText(idea.solution, 50);
+
+    return {
+      id: idea.id,
+      title: idea.title,
+      description: shortDescription,
+      solution: shortSolution,
+      isLocked: false,
+      image: idea.image,
+      price: idea.price,
+      isPaid: idea.isPaid,
+
+      upvotes,
+      downvotes,
+      votesCount,
+      currentUserVote: vote.value,
+
+      commentsCount: idea.commentsCount,
+      watchListCount: idea.watchListCount,
+      isWatchlisted,
+      hasPurchased,
+      isOwner,
+      category: idea.category,
+      author: idea.author,
+      createdAt: idea.createdAt,
+    };
+  });
+
 
   // ==============================
   // DASHBOARD STATS
@@ -215,7 +308,8 @@ const getMyVotedIdeas = async (userId: string, query: IQueryParams) => {
   });
 
   return {
-    data: result.data,
+    data: modifiedData,
+
     meta: result.meta,
 
     // dashboard counts

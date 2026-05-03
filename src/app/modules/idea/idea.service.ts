@@ -640,7 +640,7 @@ const getIdeaAccess = async (ideaId: string, userId?: string, role?: Role) => {
 
 /**
  * Get latest 8 approved ideas for homepage
- * @desc Get latest 8 approved ideas for homepage
+ * @desc Get latest 6 approved ideas for homepage
  * @route GET /api/v1/ideas/latest
  * @access Public
  * @param userId (optional) - for current user vote
@@ -654,7 +654,7 @@ const getLatestIdeas = async (userId?: string) => {
     orderBy: {
       createdAt: "desc",
     },
-    take: 8,
+    take: 6,
     include: {
       author: {
         select: {

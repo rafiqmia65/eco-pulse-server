@@ -3,6 +3,7 @@ import { prisma } from "../../lib/prisma";
 import AppError from "../../helpers/errorHelpers/AppError";
 import { IdeaStatus, PaymentStatus } from "../../../../generated/prisma/enums";
 import { IQueryParams } from "../../interfaces/query.interface";
+import { getVoteData, truncateText } from "../idea/idea.helpers";
 
 /*Toggle idea in watchList (add/remove)
 Steps:
@@ -184,15 +185,22 @@ const getMyWatchList = async (userId: string, query: IQueryParams) => {
         include: {
           author: true,
           category: true,
+          votes: true,
+          watchLists: {
+            where: {
+              userId,
+            },
+          },
           payments: {
-            select: {
-              userId: true,
-              status: true,
+            where: {
+              userId,
+              status: PaymentStatus.PAID,
             },
           },
         },
       },
     },
+
     orderBy: {
       idea: {
         createdAt: "desc",
@@ -203,39 +211,75 @@ const getMyWatchList = async (userId: string, query: IQueryParams) => {
   const data = result.map((item: any) => {
     const idea = item.idea;
 
-    const shortDescription =
-      idea.description?.length > 100
-        ? idea.description.slice(0, 100) + "..."
-        : idea.description;
-
-    const hasPaid = idea.payments?.some(
-      (p: any) => p.userId === userId && p.status === PaymentStatus.PAID,
+    // -----------------------------
+    // VOTE & ACCESS CALCULATION
+    // -----------------------------
+    const { upvotes, downvotes, votesCount, currentUserVote } = getVoteData(
+      idea.votes,
+      userId,
     );
 
-    const isLocked = idea.isPaid && !hasPaid;
+    const isWatchlisted = idea.watchLists.length > 0;
+    const hasPurchased = idea.payments.length > 0;
+    const isOwner = idea.authorId === userId;
 
-    const shortSolution =
-      idea.solution?.length > 50
-        ? idea.solution.slice(0, 50) + "..."
-        : idea.solution;
+    const shortDescription = truncateText(idea.description, 100);
+
+    // -----------------------------
+    // PAID CONTENT LOGIC
+    // -----------------------------
+    if (idea.isPaid && !hasPurchased && !isOwner) {
+      return {
+        id: idea.id,
+        title: idea.title,
+        description: shortDescription,
+        solution: "Unlock full solution by purchasing this idea",
+        isLocked: true,
+        image: idea.image,
+        price: idea.price,
+        isPaid: idea.isPaid,
+
+        upvotes,
+        downvotes,
+        votesCount,
+        currentUserVote,
+
+        commentsCount: idea.commentsCount,
+        watchListCount: idea.watchListCount,
+        isWatchlisted,
+        hasPurchased,
+        isOwner,
+        category: idea.category,
+        author: idea.author,
+        createdAt: idea.createdAt,
+      };
+    }
+
+    // -----------------------------
+    // FREE OR PURCHASED CONTENT
+    // -----------------------------
+    const shortSolution = truncateText(idea.solution, 50);
 
     return {
       id: idea.id,
       title: idea.title,
       description: shortDescription,
-      solution: isLocked
-        ? "Unlock full solution by purchasing this idea"
-        : shortSolution,
-
-      isLocked,
+      solution: shortSolution,
+      isLocked: false,
       image: idea.image,
       price: idea.price,
       isPaid: idea.isPaid,
 
-      votesCount: idea.votesCount,
+      upvotes,
+      downvotes,
+      votesCount,
+      currentUserVote,
+
       commentsCount: idea.commentsCount,
       watchListCount: idea.watchListCount,
-
+      isWatchlisted,
+      hasPurchased,
+      isOwner,
       category: idea.category,
       author: idea.author,
       createdAt: idea.createdAt,
