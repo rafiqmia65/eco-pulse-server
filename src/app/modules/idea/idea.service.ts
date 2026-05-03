@@ -123,7 +123,18 @@ const getAllIdeas = async (query: IQueryParams & { userId?: string }) => {
     .include({
       author: true,
       category: true,
-      votes: true, // IMPORTANT (added)
+      votes: true,
+      watchLists: {
+        where: {
+          userId: query.userId || "",
+        },
+      },
+      payments: {
+        where: {
+          userId: query.userId || "",
+          status: PaymentStatus.PAID,
+        },
+      },
     });
 
   // override sorting
@@ -183,6 +194,10 @@ const getAllIdeas = async (query: IQueryParams & { userId?: string }) => {
         currentUserVote,
 
         commentsCount: idea.commentsCount,
+        watchListCount: idea.watchListCount,
+        isWatchlisted: query.userId ? idea.watchLists.length > 0 : false,
+        hasPurchased: query.userId ? idea.payments.length > 0 : false,
+        isOwner: query.userId ? idea.authorId === query.userId : false,
         category: idea.category,
         author: idea.author,
         createdAt: idea.createdAt,
@@ -213,6 +228,10 @@ const getAllIdeas = async (query: IQueryParams & { userId?: string }) => {
       currentUserVote,
 
       commentsCount: idea.commentsCount,
+      watchListCount: idea.watchListCount,
+      isWatchlisted: query.userId ? idea.watchLists.length > 0 : false,
+      hasPurchased: query.userId ? idea.payments.length > 0 : false,
+      isOwner: query.userId ? idea.authorId === query.userId : false,
       category: idea.category,
       author: idea.author,
       createdAt: idea.createdAt,
@@ -526,6 +545,11 @@ const getIdeaAccess = async (ideaId: string, userId?: string, role?: Role) => {
           status: true,
         },
       },
+      watchLists: {
+        where: {
+          userId: userId || "",
+        },
+      },
     },
   });
 
@@ -544,6 +568,8 @@ const getIdeaAccess = async (ideaId: string, userId?: string, role?: Role) => {
 
   const voteData = getVoteData(idea.votes, userId);
 
+  const isWatchlisted = userId ? idea.watchLists.length > 0 : false;
+
   const baseResponse = {
     id: idea.id,
     title: idea.title,
@@ -554,6 +580,9 @@ const getIdeaAccess = async (ideaId: string, userId?: string, role?: Role) => {
     isPaid: idea.isPaid,
 
     ...voteData,
+
+    isWatchlisted,
+    watchListCount: idea.watchListCount,
 
     category: idea.category,
     author: idea.author,
@@ -636,6 +665,17 @@ const getLatestIdeas = async (userId?: string) => {
       },
       category: true,
       votes: true,
+      watchLists: {
+        where: {
+          userId: userId || "",
+        },
+      },
+      payments: {
+        where: {
+          userId: userId || "",
+          status: PaymentStatus.PAID,
+        },
+      },
     },
   });
 
@@ -686,6 +726,10 @@ const getLatestIdeas = async (userId?: string) => {
         currentUserVote,
 
         commentsCount: idea.commentsCount,
+        watchListCount: idea.watchListCount,
+        isWatchlisted: userId ? idea.watchLists.length > 0 : false,
+        hasPurchased: userId ? idea.payments.length > 0 : false,
+        isOwner: userId ? idea.authorId === userId : false,
         category: idea.category,
         author: idea.author,
         createdAt: idea.createdAt,
@@ -716,6 +760,10 @@ const getLatestIdeas = async (userId?: string) => {
       currentUserVote,
 
       commentsCount: idea.commentsCount,
+      watchListCount: idea.watchListCount,
+      isWatchlisted: userId ? idea.watchLists.length > 0 : false,
+      hasPurchased: userId ? idea.payments.length > 0 : false,
+      isOwner: userId ? idea.authorId === userId : false,
       category: idea.category,
       author: idea.author,
       createdAt: idea.createdAt,
@@ -750,6 +798,17 @@ const getTrendingIdeas = async (userId?: string) => {
       },
       category: true,
       votes: true,
+      watchLists: {
+        where: {
+          userId: userId || "",
+        },
+      },
+      payments: {
+        where: {
+          userId: userId || "",
+          status: PaymentStatus.PAID,
+        },
+      },
     },
   });
 
@@ -820,6 +879,10 @@ const getTrendingIdeas = async (userId?: string) => {
         currentUserVote,
 
         commentsCount: idea.commentsCount,
+        watchListCount: idea.watchListCount,
+        isWatchlisted: userId ? idea.watchLists.length > 0 : false,
+        hasPurchased: userId ? idea.payments.length > 0 : false,
+        isOwner: userId ? idea.authorId === userId : false,
         category: idea.category,
         author: idea.author,
         createdAt: idea.createdAt,
@@ -850,6 +913,10 @@ const getTrendingIdeas = async (userId?: string) => {
       currentUserVote,
 
       commentsCount: idea.commentsCount,
+      watchListCount: idea.watchListCount,
+      isWatchlisted: userId ? idea.watchLists.length > 0 : false,
+      hasPurchased: userId ? idea.payments.length > 0 : false,
+      isOwner: userId ? idea.authorId === userId : false,
       category: idea.category,
       author: idea.author,
       createdAt: idea.createdAt,
