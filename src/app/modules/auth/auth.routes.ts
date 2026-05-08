@@ -59,4 +59,8 @@ AuthRoutes.post(
   AuthController.changePassword,
 );
 
+// AuthRoutes.get("/login/google", AuthController.googleLogin);
+// AuthRoutes.get("/google/success", AuthController.googleLoginSuccess);
+// AuthRoutes.get("/oauth/error", AuthController.handleOAuthError);
+
 export default AuthRoutes;

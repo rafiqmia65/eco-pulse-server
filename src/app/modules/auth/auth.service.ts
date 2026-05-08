@@ -385,6 +385,73 @@ const changePassword = async (
   };
 };
 
+// const googleLoginSuccess = async (session: Record<string, any>) => {
+//   const sessionUser = session.user;
+
+// Check if user exists in the database
+//   let user = await prisma.user.findUnique({
+//     where: { id: sessionUser.id },
+//   });
+
+// If user doesn't exist, we can consider them "registered" via Google
+// and ensure they are present in the DB (Better-Auth usually handles this,
+// but we follow the user's request to ensure registration/login logic).
+//   if (!user) {
+//     user = await prisma.user.create({
+//       data: {
+//         id: sessionUser.id,
+//         name: sessionUser.name,
+//         email: sessionUser.email,
+//         image: sessionUser.image,
+//         role: sessionUser.role || Role.MEMBER,
+//         status: UserStatus.ACTIVE,
+//       },
+//     });
+//   }
+
+//   if (user.isDeleted) {
+//     throw new AppError(status.FORBIDDEN, "Your account has been deleted");
+//   }
+
+//   if (user.status === UserStatus.BLOCKED) {
+//     throw new AppError(status.FORBIDDEN, "Your account has been blocked");
+//   }
+
+//   const accessToken = tokenUtils.getAccessToken({
+//     userId: user.id,
+//     role: user.role,
+//     name: user.name,
+//     email: user.email,
+//     status: user.status,
+//     isDeleted: user.isDeleted,
+//     emailVerified: user.emailVerified,
+//   });
+
+//   const refreshToken = tokenUtils.getRefreshToken({
+//     userId: user.id,
+//     role: user.role,
+//     name: user.name,
+//     email: user.email,
+//     status: user.status,
+//     isDeleted: user.isDeleted,
+//     emailVerified: user.emailVerified,
+//   });
+
+// Role based redirect
+//   let redirectUrl = "/";
+//   if (user.role === Role.ADMIN) {
+//     redirectUrl = "/admin";
+//   } else if (user.role === Role.MEMBER) {
+//     redirectUrl = "/dashboard";
+//   }
+
+//   return {
+//     accessToken,
+//     refreshToken,
+//     redirectUrl,
+//   };
+// };
+
 export const AuthService = {
   registerUser,
   loginUser,
@@ -392,4 +459,5 @@ export const AuthService = {
   logoutUser,
   getMe,
   changePassword,
+  // googleLoginSuccess,
 };

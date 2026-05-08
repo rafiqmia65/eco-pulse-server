@@ -1,6 +1,7 @@
 import { Server } from "http";
 import app from "./app";
 import { envVars } from "./app/config/env";
+import logger from "./app/utils/logger";
 
 let server: Server;
 const bootstrap = async () => {
@@ -9,10 +10,10 @@ const bootstrap = async () => {
     const port = envVars.PORT || 5000;
 
     server = app.listen(port, () => {
-      console.log(`Server is running on port ${port}`);
+      logger.info(`Server is running on port ${port}`);
     });
   } catch (error) {
-    console.error("Failed to start server:", error);
+    logger.error(error, "Failed to start server");
   }
 };
 

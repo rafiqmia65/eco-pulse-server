@@ -172,6 +172,62 @@ const changePassword = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+// /api/v1/auth/login/google?redirect=/profile
+// const googleLogin = catchAsync(async (req, res) => {
+//   const redirect = (req.query.redirect as string) || "/dashboard";
+
+//   const callbackURL = `${envVars.GOOGLE_CALLBACK_URL}?redirect=${encodeURIComponent(redirect)}`;
+
+//   const result = await auth.api.signInSocial({
+//     body: {
+//       provider: "google",
+//       callbackURL: callbackURL,
+//     },
+//   });
+
+//   if (result?.url) {
+//     return res.redirect(result.url);
+//   }
+
+//   throw new AppError(500, "Google login failed");
+// });
+
+// const googleLoginSuccess = catchAsync(async (req: Request, res: Response) => {
+//   const sessionToken = req.cookies["better-auth.session_token"];
+
+//   if (!sessionToken) {
+//     return res.redirect(`${envVars.FRONTEND_URL}/login?error=oauth_failed`);
+//   }
+
+//   const session = await auth.api.getSession({
+//     headers: {
+//       Cookie: `better-auth.session_token=${sessionToken}`,
+//     },
+//   });
+
+//   if (!session) {
+//     return res.redirect(`${envVars.FRONTEND_URL}/login?error=no_session_found`);
+//   }
+
+//   if (session && !session.user) {
+//     return res.redirect(`${envVars.FRONTEND_URL}/login?error=no_user_found`);
+//   }
+
+//   const result = await AuthService.googleLoginSuccess(session);
+
+//   const { accessToken, refreshToken, redirectUrl } = result;
+
+//   tokenUtils.setAccessTokenCookie(res, accessToken);
+//   tokenUtils.setRefreshTokenCookie(res, refreshToken);
+
+//   res.redirect(`${envVars.FRONTEND_URL}${redirectUrl}`);
+// });
+
+// const handleOAuthError = catchAsync((req: Request, res: Response) => {
+//   const error = (req.query.error as string) || "oauth_failed";
+//   res.redirect(`${envVars.FRONTEND_URL}/login?error=${error}`);
+// });
+
 export const AuthController = {
   registerUser,
   loginUser,
@@ -179,4 +235,7 @@ export const AuthController = {
   logoutUser,
   getMe,
   changePassword,
+  // googleLogin,
+  // googleLoginSuccess,
+  // handleOAuthError,
 };

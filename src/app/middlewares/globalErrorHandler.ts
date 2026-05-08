@@ -15,6 +15,7 @@ import {
 } from "../helpers/errorHelpers/handlePrismaErrors";
 import { handleZodError } from "../helpers/errorHelpers/handleZodError";
 import AppError from "../helpers/errorHelpers/AppError";
+import logger from "../utils/logger";
 
 export const globalErrorHandler = (
   err: any,
@@ -23,7 +24,7 @@ export const globalErrorHandler = (
   next: NextFunction,
 ) => {
   if (envVars.NODE_ENV === "development") {
-    console.log("Error from Global Error Handler", err);
+    logger.error(err, "Error from Global Error Handler");
   }
 
   let errorSources: TErrorSources[] = [];

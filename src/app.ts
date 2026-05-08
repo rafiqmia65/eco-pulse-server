@@ -8,6 +8,8 @@ import cookieParser from "cookie-parser";
 import { PaymentController } from "./app/modules/payment/payment.controller";
 import { globalRateLimiter } from "./app/middlewares/rateLimiter";
 
+import { requestLogger } from "./app/middlewares/requestLogger";
+
 const app: Application = express();
 
 app.use(
@@ -37,6 +39,9 @@ app.use(express.urlencoded({ extended: true }));
 
 // Apply rate limiting middleware
 app.use(globalRateLimiter);
+
+// Apply request logging middleware
+app.use(requestLogger);
 
 app.use("/api/v1", indexRoutes);
 
