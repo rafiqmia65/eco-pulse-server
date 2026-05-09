@@ -3,9 +3,9 @@ import z from "zod";
 export const createIdeaSchema = z
   .object({
     title: z.string().min(5).max(150).trim(),
-    problem: z.string().min(20).trim(),
-    solution: z.string().min(20).trim(),
-    description: z.string().min(20).trim(),
+    problem: z.string().min(250).trim(),
+    solution: z.string().min(500).trim(),
+    description: z.string().min(500).trim(),
     image: z.string().url().optional(),
 
     slug: z
@@ -53,9 +53,9 @@ export const createIdeaSchema = z
 
 export const ideaUpdateSchema = z.object({
   title: z.string().optional(),
-  problem: z.string().optional(),
-  solution: z.string().optional(),
-  description: z.string().optional(),
+  problem: z.string().min(250).optional(),
+  solution: z.string().min(500).optional(),
+  description: z.string().min(500).optional(),
   image: z.string().url().optional(),
   slug: z.string().nullable().optional(),
   isPaid: z.boolean().optional(),

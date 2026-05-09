@@ -26,3 +26,15 @@ enum PaymentStatus {
     PAID
     FAILED
 }
+
+enum AIInteractionType {
+    CHAT
+    CONTENT_GEN
+    RECOMMENDATION
+    DATA_ANALYSIS
+}
+
+enum MessageRole {
+    USER
+    ASSISTANT
+}

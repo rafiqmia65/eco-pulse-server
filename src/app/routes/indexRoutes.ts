@@ -8,6 +8,7 @@ import WatchListRoutes from "../modules/watchList/watchList.router";
 import VoteRoutes from "../modules/vote/vote.route";
 import CommentRoutes from "../modules/comment/comment.route";
 import PaymentRoutes from "../modules/payment/payment.route";
+import AIRoutes from "../modules/ai/ai.routes";
 
 const indexRoutes: Router = Router();
 
@@ -37,5 +38,8 @@ indexRoutes.use("/comments", CommentRoutes);
 
 // Mount the PaymentRoutes under the /payments path
 indexRoutes.use("/payments", PaymentRoutes);
+
+// Mount the AIRoutes under the /ai path
+indexRoutes.use("/ai", AIRoutes);
 
 export default indexRoutes;

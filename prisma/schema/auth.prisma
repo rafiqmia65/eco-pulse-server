@@ -18,9 +18,10 @@ model User {
 
     createdAt  DateTime    @default(now())
     updatedAt  DateTime    @updatedAt
-    sessions   Session[]
-    accounts   Account[]
-    watchLists WatchList[]
+    sessions      Session[]
+    accounts      Account[]
+    watchLists    WatchList[]
+    conversations AIConversation[]
 
     @@unique([email])
     @@map("user")

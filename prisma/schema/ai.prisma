@@ -1,0 +1,25 @@
+model AIConversation {
+    id        String            @id @default(uuid())
+    type      AIInteractionType
+    userId    String
+    user      User              @relation(fields: [userId], references: [id])
+    messages  AIMessage[]
+    createdAt DateTime          @default(now())
+    updatedAt DateTime          @updatedAt
+
+    @@index([userId])
+    @@map("ai_conversation")
+}
+
+model AIMessage {
+    id             String         @id @default(uuid())
+    conversationId String
+    conversation   AIConversation @relation(fields: [conversationId], references: [id])
+    role           MessageRole
+    content        String         @db.Text
+    metadata       Json? // Store structured results or extra info
+    createdAt      DateTime       @default(now())
+
+    @@index([conversationId])
+    @@map("ai_message")
+}

@@ -38,6 +38,7 @@ interface EnvConfig {
   };
   //   SUPER_ADMIN_EMAIL: string;
   //   SUPER_ADMIN_PASSWORD: string;
+  GEMINI_API_KEY: string;
 }
 
 const loadEnvVariables = (): EnvConfig => {
@@ -70,6 +71,7 @@ const loadEnvVariables = (): EnvConfig => {
     "STRIPE_WEBHOOK_SECRET",
     // "SUPER_ADMIN_EMAIL",
     // "SUPER_ADMIN_PASSWORD",
+    "GEMINI_API_KEY",
   ];
 
   requiredEnvVariables.forEach((variable) => {
@@ -118,6 +120,7 @@ const loadEnvVariables = (): EnvConfig => {
     },
     // SUPER_ADMIN_EMAIL: process.env.SUPER_ADMIN_EMAIL as string,
     // SUPER_ADMIN_PASSWORD: process.env.SUPER_ADMIN_PASSWORD as string,
+    GEMINI_API_KEY: process.env.GEMINI_API_KEY as string,
   };
 };
 
