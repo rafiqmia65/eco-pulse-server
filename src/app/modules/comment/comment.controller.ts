@@ -3,6 +3,7 @@ import { catchAsync } from "../../shared/catchAsync";
 import { sendResponse } from "../../shared/sendResponse";
 import status from "http-status";
 import { CommentService } from "./comment.service";
+import { CacheUtils } from "../../utils/cache";
 import { Role } from "../../../../generated/prisma/enums";
 import {
   ICreateCommentPayload,
@@ -20,11 +21,27 @@ const getIdeaComments = catchAsync(async (req: Request, res: Response) => {
   const page = Number(req.query.page || 1);
   const limit = Number(req.query.limit || 5);
 
+  const cacheKey = `comments:${ideaId}:p${page}:l${limit}`;
+
+  // Try to get from cache
+  const cachedComments = await CacheUtils.getCache(cacheKey);
+  if (cachedComments) {
+    return sendResponse(res, {
+      httpStatusCode: status.OK,
+      success: true,
+      message: "Comments fetched successfully (from cache)",
+      data: cachedComments,
+    });
+  }
+
   const result = await CommentService.getIdeaComments(
     ideaId as string,
     page,
     limit,
   );
+
+  // Set cache for 5 minutes
+  await CacheUtils.setCache(cacheKey, result, 300);
 
   sendResponse(res, {
     httpStatusCode: status.OK,
@@ -60,6 +77,9 @@ const createComment = catchAsync(async (req: Request, res: Response) => {
     content,
     parentId,
   } as ICreateCommentPayload);
+
+  // Invalidate comment cache for this idea
+  await CacheUtils.clearCacheByPattern(`comments:${ideaId}:*`);
 
   sendResponse(res, {
     httpStatusCode: status.CREATED,
@@ -97,6 +117,9 @@ const updateComment = catchAsync(async (req: Request, res: Response) => {
     commentId,
     content,
   } as IUpdateCommentPayload);
+
+  // Invalidate all comment caches
+  await CacheUtils.clearCacheByPattern("comments:*");
 
   sendResponse(res, {
     httpStatusCode: status.OK,
@@ -137,6 +160,10 @@ const deleteComment = catchAsync(async (req: Request, res: Response) => {
     commentId as string,
   );
 
+  // Invalidate all comment caches (since we don't have ideaId easily here without DB hit)
+  // Or we could have service return ideaId. For now, clear all comments or use a pattern.
+  await CacheUtils.clearCacheByPattern("comments:*");
+
   sendResponse(res, {
     httpStatusCode: status.OK,
     success: true,
@@ -166,6 +193,9 @@ const restoreComment = catchAsync(async (req: Request, res: Response) => {
     userRole,
     commentId as string,
   );
+
+  // Invalidate all comment caches
+  await CacheUtils.clearCacheByPattern("comments:*");
 
   sendResponse(res, {
     httpStatusCode: status.OK,

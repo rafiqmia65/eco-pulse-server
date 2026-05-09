@@ -5,6 +5,7 @@ import status from "http-status";
 import { IdeaService } from "./idea.service";
 import { IQueryParams } from "../../interfaces/query.interface";
 import { Role } from "../../../../generated/prisma/enums";
+import { CacheUtils } from "../../utils/cache";
 
 /**
  * @desc Member: Create a new Idea
@@ -16,6 +17,9 @@ const createIdea = catchAsync(async (req: Request, res: Response) => {
   const payload = req.body;
 
   const idea = await IdeaService.createIdea(payload, authorId as string);
+
+  // Invalidate relevant caches
+  await CacheUtils.clearCacheByPattern("ideas:*");
 
   sendResponse(res, {
     httpStatusCode: status.CREATED,
@@ -183,10 +187,24 @@ const getIdeaAccess = catchAsync(async (req: Request, res: Response) => {
  * @access Public (user optional)
  */
 const getLatestIdeas = catchAsync(async (req: Request, res: Response) => {
-  // user optional (not logged in users will see the same latest ideas, but we can use userId to personalize if needed)
+  // user optional
   const userId = req.user?.userId;
+  const cacheKey = `ideas:latest:${userId || "public"}`;
+
+  const cachedLatest = await CacheUtils.getCache(cacheKey);
+  if (cachedLatest) {
+    return sendResponse(res, {
+      httpStatusCode: status.OK,
+      success: true,
+      message: "Latest ideas fetched successfully (from cache)",
+      data: cachedLatest,
+    });
+  }
 
   const result = await IdeaService.getLatestIdeas(userId);
+
+  // Cache for 15 minutes
+  await CacheUtils.setCache(cacheKey, result, 900);
 
   sendResponse(res, {
     httpStatusCode: status.OK,
@@ -205,8 +223,22 @@ const getLatestIdeas = catchAsync(async (req: Request, res: Response) => {
  */
 const getTrendingIdeas = catchAsync(async (req: Request, res: Response) => {
   const userId = req.user?.userId; // optional user
+  const cacheKey = `ideas:trending:${userId || "public"}`;
+
+  const cachedTrending = await CacheUtils.getCache(cacheKey);
+  if (cachedTrending) {
+    return sendResponse(res, {
+      httpStatusCode: status.OK,
+      success: true,
+      message: "Trending ideas fetched successfully (from cache)",
+      data: cachedTrending,
+    });
+  }
 
   const result = await IdeaService.getTrendingIdeas(userId);
+
+  // Cache for 15 minutes
+  await CacheUtils.setCache(cacheKey, result, 900);
 
   sendResponse(res, {
     httpStatusCode: status.OK,

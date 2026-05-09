@@ -4,6 +4,7 @@ import { sendResponse } from "../../shared/sendResponse";
 import status from "http-status";
 import { WatchListService } from "./watchList.service";
 import { IQueryParams } from "../../interfaces/query.interface";
+import { CacheUtils } from "../../utils/cache";
 
 /*@desc Toggle idea in watchList (add/remove)
 * @route POST /api/v1/watchList/toggle/:id 
@@ -22,6 +23,9 @@ const toggleWatchList = catchAsync(async (req: Request, res: Response) => {
     userId,
     ideaId as string,
   );
+
+  // Invalidate user's watchlist cache
+  await CacheUtils.clearCacheByPattern(`watchlist:${userId}:*`);
 
   sendResponse(res, {
     httpStatusCode: status.OK,
@@ -45,11 +49,26 @@ const toggleWatchList = catchAsync(async (req: Request, res: Response) => {
 */
 const getMyWatchList = catchAsync(async (req: Request, res: Response) => {
   const userId = req.user?.userId as string;
+  const query = req.query as IQueryParams;
+  const cacheKey = `watchlist:${userId}:${JSON.stringify(query)}`;
 
-  const result = await WatchListService.getMyWatchList(
-    userId,
-    req.query as IQueryParams,
-  );
+  const cachedWatchlist = await CacheUtils.getCache(cacheKey);
+  if (cachedWatchlist) {
+    return sendResponse(res, {
+      httpStatusCode: status.OK,
+      success: true,
+      message: "WatchList fetched successfully (from cache)",
+      // @ts-expect-error - cached data structure matches result
+      data: cachedWatchlist.data,
+      // @ts-expect-error - cached data structure matches result
+      meta: cachedWatchlist.meta,
+    });
+  }
+
+  const result = await WatchListService.getMyWatchList(userId, query);
+
+  // Cache for 5 minutes
+  await CacheUtils.setCache(cacheKey, result, 300);
 
   sendResponse(res, {
     httpStatusCode: status.OK,

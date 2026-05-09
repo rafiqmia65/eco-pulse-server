@@ -7,6 +7,7 @@ import { IQueryParams } from "../../interfaces/query.interface";
 import { catchAsync } from "../../shared/catchAsync";
 import { sendResponse } from "../../shared/sendResponse";
 import { PaymentService } from "./payment.service";
+import { CacheUtils } from "../../utils/cache";
 
 /**
  * @desc Handle Stripe webhook events for payment processing
@@ -48,6 +49,15 @@ const handleStripeWebhookEvent = catchAsync(
 
     try {
       await PaymentService.handlerStripeWebhookEvent(event);
+
+      // Invalidate payment and purchase caches on success
+      // Since webhooks can affect multiple users (though usually one),
+      // and we don't have the userId directly in the event object here
+      // without parsing the metadata inside the service, we clear all for safety
+      // or we could clear specific patterns if we extracted userId.
+      await CacheUtils.clearCacheByPattern("payments:*");
+      await CacheUtils.clearCacheByPattern("purchases:*");
+      await CacheUtils.clearCacheByPattern("admin:*");
 
       return sendResponse(res, {
         httpStatusCode: status.OK,
@@ -98,11 +108,28 @@ const createIdeaPurchase = catchAsync(async (req: Request, res: Response) => {
  */
 const getMyPurchasedIdeas = catchAsync(async (req: Request, res: Response) => {
   const userId = req.user?.userId as string;
+  const query = req.query as IQueryParams;
+  const cacheKey = `purchases:ideas:${userId}:${JSON.stringify(query)}`;
 
-  const result = await PaymentService.getMyPurchasedIdeas(
-    userId,
-    req.query as IQueryParams,
-  );
+  const cachedPurchases = await CacheUtils.getCache(cacheKey);
+  if (cachedPurchases) {
+    return sendResponse(res, {
+      httpStatusCode: status.OK,
+      success: true,
+      message: "Purchased ideas fetched successfully (from cache)",
+      // @ts-expect-error - cached data structure matches result
+      data: cachedPurchases.data,
+      // @ts-expect-error - cached data structure matches result
+      meta: cachedPurchases.meta,
+      // @ts-expect-error - cached data structure matches result
+      counts: cachedPurchases.summary,
+    });
+  }
+
+  const result = await PaymentService.getMyPurchasedIdeas(userId, query);
+
+  // Cache for 5 minutes
+  await CacheUtils.setCache(cacheKey, result, 300);
 
   return sendResponse(res, {
     httpStatusCode: status.OK,
@@ -145,12 +172,31 @@ const getMyPurchasedIdeaDetails = catchAsync(
  * @access Private (Member)
  */
 const getPaymentHistory = catchAsync(async (req: Request, res: Response) => {
-  const userId = req.user?.userId;
+  const userId = req.user?.userId as string;
+  const query = req.query;
+  const cacheKey = `payments:history:${userId}:${JSON.stringify(query)}`;
 
-  const result = await PaymentService.getPaymentHistory(
-    userId as string,
-    req.query,
-  );
+  const cachedHistory = await CacheUtils.getCache(cacheKey);
+  if (cachedHistory) {
+    return sendResponse(res, {
+      httpStatusCode: status.OK,
+      success: true,
+      message: "Payment history fetched successfully (from cache)",
+      data: {
+        // @ts-expect-error - cached data structure matches result
+        list: cachedHistory.data,
+        // @ts-expect-error - cached data structure matches result
+        stats: cachedHistory.stats,
+      },
+      // @ts-expect-error - cached data structure matches result
+      meta: cachedHistory.meta,
+    });
+  }
+
+  const result = await PaymentService.getPaymentHistory(userId, query);
+
+  // Cache for 5 minutes
+  await CacheUtils.setCache(cacheKey, result, 300);
 
   sendResponse(res, {
     httpStatusCode: status.OK,

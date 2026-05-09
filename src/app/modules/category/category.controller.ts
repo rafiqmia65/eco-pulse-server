@@ -3,6 +3,7 @@ import { catchAsync } from "../../shared/catchAsync";
 import { sendResponse } from "../../shared/sendResponse";
 import status from "http-status";
 import { CategoryService } from "./category.service";
+import { CacheUtils } from "../../utils/cache";
 
 /**
  * @desc Create category
@@ -11,6 +12,9 @@ import { CategoryService } from "./category.service";
  */
 const createCategory = catchAsync(async (req: Request, res: Response) => {
   const result = await CategoryService.createCategory(req.body);
+
+  // Invalidate cache
+  await CacheUtils.deleteCache("categories:all");
 
   sendResponse(res, {
     httpStatusCode: status.CREATED,
@@ -26,7 +30,23 @@ const createCategory = catchAsync(async (req: Request, res: Response) => {
  * @access Public
  */
 const getAllCategories = catchAsync(async (_req: Request, res: Response) => {
+  const cacheKey = "categories:all";
+
+  // Try to get from cache
+  const cachedCategories = await CacheUtils.getCache(cacheKey);
+  if (cachedCategories) {
+    return sendResponse(res, {
+      httpStatusCode: status.OK,
+      success: true,
+      message: "Categories retrieved successfully (from cache)",
+      data: cachedCategories,
+    });
+  }
+
   const result = await CategoryService.getAllCategories();
+
+  // Set cache for 1 hour
+  await CacheUtils.setCache(cacheKey, result, 3600);
 
   sendResponse(res, {
     httpStatusCode: status.OK,
@@ -46,6 +66,9 @@ const updateCategory = catchAsync(async (req: Request, res: Response) => {
 
   const result = await CategoryService.updateCategory(id as string, req.body);
 
+  // Invalidate cache
+  await CacheUtils.deleteCache("categories:all");
+
   sendResponse(res, {
     httpStatusCode: status.OK,
     success: true,
@@ -63,6 +86,9 @@ const deleteCategory = catchAsync(async (req: Request, res: Response) => {
   const { id } = req.params;
 
   const result = await CategoryService.deleteCategory(id as string);
+
+  // Invalidate cache
+  await CacheUtils.deleteCache("categories:all");
 
   sendResponse(res, {
     httpStatusCode: status.OK,
@@ -105,6 +131,9 @@ const recoverCategory = catchAsync(async (req: Request, res: Response) => {
   const { id } = req.params;
 
   const result = await CategoryService.recoverCategory(id as string);
+
+  // Invalidate cache
+  await CacheUtils.deleteCache("categories:all");
 
   sendResponse(res, {
     httpStatusCode: status.OK,

@@ -5,6 +5,7 @@ import { sendResponse } from "../../shared/sendResponse";
 import status from "http-status";
 import { Role } from "../../../../generated/prisma/enums";
 import { IQueryParams } from "../../interfaces/query.interface";
+import { CacheUtils } from "../../utils/cache";
 
 /* 
  *@desc Toggle vote (upvote/downvote) for an idea
@@ -30,6 +31,11 @@ const toggleVote = catchAsync(async (req: Request, res: Response) => {
     userRole as Role,
   );
 
+  // Invalidate user's voted ideas cache
+  await CacheUtils.clearCacheByPattern(`votes:${userId}:*`);
+  // Also clear idea-specific caches as vote counts might have changed
+  await CacheUtils.clearCacheByPattern("ideas:*");
+
   sendResponse(res, {
     httpStatusCode: status.OK,
     success: true,
@@ -48,21 +54,35 @@ const toggleVote = catchAsync(async (req: Request, res: Response) => {
 */
 const getMyVotedIdeas = catchAsync(async (req: Request, res: Response) => {
   const userId = req.user?.userId as string;
+  const query = req.query as IQueryParams;
+  const cacheKey = `votes:${userId}:${JSON.stringify(query)}`;
 
-  const result = await VoteService.getMyVotedIdeas(
-    userId,
-    req.query as IQueryParams,
-  );
+  const cachedVoted = await CacheUtils.getCache(cacheKey);
+  if (cachedVoted) {
+    return sendResponse(res, {
+      httpStatusCode: status.OK,
+      success: true,
+      message: "My voted ideas fetched successfully (from cache)",
+      // @ts-expect-error - cached data structure matches result
+      data: cachedVoted.data,
+      // @ts-expect-error - cached data structure matches result
+      meta: cachedVoted.meta,
+      // @ts-expect-error - cached data structure matches result
+      counts: cachedVoted.counts,
+    });
+  }
+
+  const result = await VoteService.getMyVotedIdeas(userId, query);
+
+  // Cache for 5 minutes
+  await CacheUtils.setCache(cacheKey, result, 300);
 
   sendResponse(res, {
     httpStatusCode: status.OK,
     success: true,
     message: "My voted ideas fetched successfully",
-
     data: result.data,
     meta: result.meta,
-
-    // IMPORTANT
     counts: result.counts,
   });
 });

@@ -3,6 +3,7 @@ import { catchAsync } from "../../shared/catchAsync";
 import { sendResponse } from "../../shared/sendResponse";
 import status from "http-status";
 import { UserService } from "./user.service";
+import { CacheUtils } from "../../utils/cache";
 
 /**
  * @desc    Update logged-in user's profile
@@ -21,6 +22,11 @@ const updateProfile = catchAsync(async (req: Request, res: Response) => {
 
   const updatedUser = await UserService.updateProfile(userId, req.body);
 
+  // Invalidate user caches
+  await CacheUtils.deleteCache(`user_me:${userId}`);
+  await CacheUtils.deleteCache(`user_stats:${userId}`);
+  await CacheUtils.clearCacheByPattern("users:*");
+
   sendResponse(res, {
     httpStatusCode: status.OK,
     success: true,
@@ -36,8 +42,22 @@ const updateProfile = catchAsync(async (req: Request, res: Response) => {
  */
 const getUserStats = catchAsync(async (req: Request, res: Response) => {
   const userId = req.user?.userId;
+  const cacheKey = `user_stats:${userId}`;
+
+  const cachedStats = await CacheUtils.getCache(cacheKey);
+  if (cachedStats) {
+    return sendResponse(res, {
+      httpStatusCode: status.OK,
+      success: true,
+      message: "User stats fetched successfully (from cache)",
+      data: cachedStats,
+    });
+  }
 
   const result = await UserService.getUserStats(userId as string);
+
+  // Cache for 10 minutes
+  await CacheUtils.setCache(cacheKey, result, 600);
 
   sendResponse(res, {
     httpStatusCode: status.OK,
@@ -57,6 +77,11 @@ const makeAdmin = catchAsync(async (req: Request, res: Response) => {
 
   const updatedUser = await UserService.makeAdmin(targetUserId as string);
 
+  // Invalidate user caches
+  await CacheUtils.deleteCache(`user_me:${targetUserId}`);
+  await CacheUtils.deleteCache(`user_stats:${targetUserId}`);
+  await CacheUtils.clearCacheByPattern("users:*");
+
   sendResponse(res, {
     httpStatusCode: status.OK,
     success: true,
@@ -74,6 +99,11 @@ const blockUser = catchAsync(async (req: Request, res: Response) => {
   const targetUserId = req.params.id;
 
   const result = await UserService.blockUser(targetUserId as string);
+
+  // Invalidate user caches
+  await CacheUtils.deleteCache(`user_me:${targetUserId}`);
+  await CacheUtils.deleteCache(`user_stats:${targetUserId}`);
+  await CacheUtils.clearCacheByPattern("users:*");
 
   sendResponse(res, {
     httpStatusCode: status.OK,
@@ -93,6 +123,11 @@ const unblockUser = catchAsync(async (req: Request, res: Response) => {
 
   const result = await UserService.unblockUser(targetUserId as string);
 
+  // Invalidate user caches
+  await CacheUtils.deleteCache(`user_me:${targetUserId}`);
+  await CacheUtils.deleteCache(`user_stats:${targetUserId}`);
+  await CacheUtils.clearCacheByPattern("users:*");
+
   sendResponse(res, {
     httpStatusCode: status.OK,
     success: true,
@@ -108,8 +143,22 @@ const unblockUser = catchAsync(async (req: Request, res: Response) => {
  */
 const getUserById = catchAsync(async (req: Request, res: Response) => {
   const { id } = req.params;
+  const cacheKey = `users:id:${id}`;
+
+  const cachedUser = await CacheUtils.getCache(cacheKey);
+  if (cachedUser) {
+    return sendResponse(res, {
+      httpStatusCode: status.OK,
+      success: true,
+      message: "User fetched successfully (from cache)",
+      data: cachedUser,
+    });
+  }
 
   const user = await UserService.getUserById(id as string);
+
+  // Cache for 5 minutes
+  await CacheUtils.setCache(cacheKey, user, 300);
 
   sendResponse(res, {
     httpStatusCode: status.OK,
@@ -125,9 +174,26 @@ const getUserById = catchAsync(async (req: Request, res: Response) => {
  * @access  Admin only
  */
 const getAllUsers = catchAsync(async (req: Request, res: Response) => {
-  const result = await UserService.getAllUsers(
-    req.query as Record<string, string>,
-  );
+  const query = req.query as Record<string, string>;
+  const cacheKey = `users:all:${JSON.stringify(query)}`;
+
+  const cachedUsers = await CacheUtils.getCache(cacheKey);
+  if (cachedUsers) {
+    return sendResponse(res, {
+      httpStatusCode: status.OK,
+      success: true,
+      message: "Users retrieved successfully (from cache)",
+      // @ts-expect-error - cached data structure matches result
+      meta: cachedUsers.meta,
+      // @ts-expect-error - cached data structure matches result
+      data: cachedUsers.data,
+    });
+  }
+
+  const result = await UserService.getAllUsers(query);
+
+  // Cache for 5 minutes
+  await CacheUtils.setCache(cacheKey, result, 300);
 
   sendResponse(res, {
     httpStatusCode: status.OK,
