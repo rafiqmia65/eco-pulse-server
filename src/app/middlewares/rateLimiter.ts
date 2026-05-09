@@ -1,4 +1,6 @@
 import rateLimit from "express-rate-limit";
+import { RedisStore } from "rate-limit-redis";
+import redis from "../lib/redis";
 
 export const globalRateLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
@@ -6,4 +8,8 @@ export const globalRateLimiter = rateLimit({
   message: "Too many requests from this IP, please try again after 15 minutes",
   standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
   legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+  store: new RedisStore({
+    // For the 'redis' package, we use the client directly
+    sendCommand: (...args: string[]) => redis.sendCommand(args),
+  }),
 });
