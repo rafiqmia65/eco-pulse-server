@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { envVars } from "../../config/env";
@@ -12,6 +13,51 @@ import AppError from "../../helpers/errorHelpers/AppError";
 
 const genAI = new GoogleGenerativeAI(envVars.GEMINI_API_KEY);
 const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+
+const MAX_DAILY_AI_LIMIT = 10;
+
+/**
+ * Professional AI error handler
+ */
+const handleAIError = (error: any) => {
+  const errorMessage = error?.message || String(error);
+
+  if (errorMessage.includes("429") || errorMessage.includes("Quota exceeded")) {
+    throw new AppError(
+      status.TOO_MANY_REQUESTS,
+      "AI quota reached. Please try again later.",
+    );
+  }
+
+  throw error;
+};
+
+/**
+ * Validate daily AI usage
+ */
+const validateAIUsage = async (userId: string) => {
+  const startOfDay = new Date();
+  startOfDay.setHours(0, 0, 0, 0);
+
+  const usageCount = await prisma.aIMessage.count({
+    where: {
+      conversation: {
+        userId,
+      },
+      role: MessageRole.USER,
+      createdAt: {
+        gte: startOfDay,
+      },
+    },
+  });
+
+  if (usageCount >= MAX_DAILY_AI_LIMIT) {
+    throw new AppError(
+      status.TOO_MANY_REQUESTS,
+      "Daily AI limit reached. Please try again tomorrow.",
+    );
+  }
+};
 
 /**
  * Helper to save conversation and messages
@@ -64,6 +110,8 @@ const saveInteraction = async (
  * 1. AI Smart Recommendations
  */
 const getRecommendations = async (userId: string) => {
+  await validateAIUsage(userId);
+
   // Fetch user's watchlist and votes to provide context
   const userActivity = await prisma.user.findUnique({
     where: { id: userId },
@@ -116,9 +164,14 @@ const getRecommendations = async (userId: string) => {
     ]
     Ensure the JSON is valid and do not include markdown formatting.`;
 
-  const result = await model.generateContent(prompt);
-  const response = await result.response;
-  const text = response.text();
+  let text: string;
+  try {
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    text = response.text();
+  } catch (error) {
+    return handleAIError(error);
+  }
 
   let recommendations;
   try {
@@ -150,6 +203,8 @@ const chat = async (
   userMessage: string,
   conversationId?: string,
 ) => {
+  await validateAIUsage(userId);
+
   // Fetch limited history if conversationId exists
   let history: { role: string; parts: { text: string }[] }[] = [];
 
@@ -212,9 +267,13 @@ Response Instructions:
 - Avoid generic introductions.
 `;
 
-  const result = await chatSession.sendMessage(enhancedMessage);
-
-  const assistantResponse = result.response.text()?.trim();
+  let assistantResponse: string;
+  try {
+    const result = await chatSession.sendMessage(enhancedMessage);
+    assistantResponse = result.response.text()?.trim();
+  } catch (error) {
+    return handleAIError(error);
+  }
 
   // Validation
   if (!assistantResponse || assistantResponse.length < 120) {
@@ -243,6 +302,8 @@ Response Instructions:
  * 3. AI Data Analyzer
  */
 const analyzeIdea = async (userId: string, ideaId: string) => {
+  await validateAIUsage(userId);
+
   const idea = await prisma.idea.findUnique({
     where: { id: ideaId },
     include: {
@@ -275,9 +336,14 @@ const analyzeIdea = async (userId: string, ideaId: string) => {
     
     Ensure the JSON is valid and do not include markdown formatting.`;
 
-  const result = await model.generateContent(prompt);
-  const response = await result.response;
-  const text = response.text();
+  let text: string;
+  try {
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    text = response.text();
+  } catch (error) {
+    return handleAIError(error);
+  }
 
   let analysis;
   try {
@@ -349,6 +415,8 @@ const generateContent = async (
   topic: string,
   categoryId: string,
 ) => {
+  await validateAIUsage(userId);
+
   // Verify category exists
   const category = await prisma.category.findUnique({
     where: { id: categoryId },
@@ -381,9 +449,14 @@ Rules:
 - Do NOT include markdown formatting or code fences.
 - Return only the raw JSON object.`;
 
-  const result = await model.generateContent(prompt);
-  const response = await result.response;
-  const raw = response.text().trim();
+  let raw: string;
+  try {
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    raw = response.text().trim();
+  } catch (error) {
+    return handleAIError(error);
+  }
 
   let content: {
     title: string;
