@@ -22,14 +22,28 @@ const MAX_DAILY_AI_LIMIT = 10;
 const handleAIError = (error: any) => {
   const errorMessage = error?.message || String(error);
 
-  if (errorMessage.includes("429") || errorMessage.includes("Quota exceeded")) {
+  if (
+    errorMessage.includes("429") ||
+    errorMessage.includes("Quota exceeded") ||
+    errorMessage.includes("Too Many Requests")
+  ) {
     throw new AppError(
       status.TOO_MANY_REQUESTS,
-      "AI quota reached. Please try again later.",
+      "Daily AI limit reached. Please try again tomorrow.",
     );
   }
 
-  throw error;
+  if (errorMessage.includes("GoogleGenerativeAI Error")) {
+    throw new AppError(
+      status.SERVICE_UNAVAILABLE,
+      "The AI service is currently busy. Please try again in a few moments.",
+    );
+  }
+
+  throw new AppError(
+    status.INTERNAL_SERVER_ERROR,
+    "Our AI consultant is taking a short break. Please try again shortly.",
+  );
 };
 
 /**
