@@ -12,8 +12,10 @@ model Comment {
     parent  Comment?  @relation("CommentReplies", fields: [parentId], references: [id], onDelete: SetNull)
     replies Comment[] @relation("CommentReplies")
 
-    isDeleted Boolean  @default(false)
-    createdAt DateTime @default(now())
+    isDeleted      Boolean   @default(false)
+    isModerated    Boolean   @default(false)
+    moderationScore Int      @default(0)
+    createdAt      DateTime  @default(now())
     updatedAt DateTime @default(now()) @updatedAt
 
     @@index([ideaId])

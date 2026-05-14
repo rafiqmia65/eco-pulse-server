@@ -22,6 +22,7 @@ model User {
     accounts      Account[]
     watchLists    WatchList[]
     conversations AIConversation[]
+    aiLogs        AILog[]
 
     @@unique([email])
     @@map("user")

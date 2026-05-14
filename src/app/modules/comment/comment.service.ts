@@ -12,6 +12,7 @@ import {
 } from "./comment.interface";
 import { QueryBuilder } from "../../utils/QueryBuilder";
 import { mapComments } from "../idea/idea.helpers";
+import { AIService } from "../ai/ai.service";
 
 /**
  * GET COMMENTS WITH PAGINATION
@@ -107,18 +108,28 @@ const createComment = async (payload: ICreateCommentPayload) => {
     }
   }
 
-  // 5️ Create the comment
+  // 5️ AI Moderation
+  const moderation = await AIService.moderateComment(content);
+
+  // 6️ Create the comment
   const comment = await prisma.comment.create({
     data: {
       content,
       userId,
       ideaId,
       parentId: parentId || null,
+      isModerated: true,
+      moderationScore: moderation.score,
+      isDeleted: moderation.isToxic, // Auto-hide if toxic
     },
     include: {
       user: true,
     },
   });
+
+  if (moderation.isToxic) {
+    throw new AppError(400, "Your comment was flagged by our AI moderator for inappropriate content.");
+  }
 
   return comment;
 };

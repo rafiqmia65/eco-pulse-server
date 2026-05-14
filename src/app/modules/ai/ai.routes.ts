@@ -1,9 +1,14 @@
-import { Router } from "express";
+import express, { Router } from "express";
 import { checkAuth } from "../../middlewares/checkAuth";
 import { Role } from "../../../../generated/prisma/enums";
 import { AIController } from "./ai.controller";
+import { validateRequest } from "../../middlewares/validateRequest";
+import { AIValidation } from "./ai.validation";
 
 const AIRoutes: Router = Router();
+
+// Ensure JSON parsing for AI routes, even if Content-Type header is missing
+AIRoutes.use(express.json({ type: ["application/json", "*/*"] }));
 
 /**
  * @route   GET /api/v1/ai/recommendations
@@ -21,7 +26,18 @@ AIRoutes.get(
  * @desc    AI Chat Assistant
  * @access  Private
  */
-AIRoutes.post("/chat", checkAuth(Role.ADMIN, Role.MEMBER), AIController.chat);
+AIRoutes.post(
+  "/chat",
+  checkAuth(Role.ADMIN, Role.MEMBER),
+  validateRequest(AIValidation.chatSchema),
+  AIController.chat,
+);
+AIRoutes.post(
+  "/chat-stream",
+  checkAuth(Role.ADMIN, Role.MEMBER),
+  validateRequest(AIValidation.chatSchema),
+  AIController.chatStream,
+);
 
 /**
  * @route   GET /api/v1/ai/analyze/:ideaId
@@ -56,15 +72,30 @@ AIRoutes.get(
   AIController.getMessages,
 );
 
-/**
- * @route   POST /api/v1/ai/generate-content
- * @desc    Generate eco-idea content using AI
- * @access  Private
- */
 AIRoutes.post(
   "/generate-content",
   checkAuth(Role.ADMIN, Role.MEMBER),
+  validateRequest(AIValidation.generateContentSchema),
   AIController.generateContent,
 );
+
+/**
+ * @route   POST /api/v1/ai/predict-score
+ * @desc    Predict idea success score
+ * @access  Private
+ */
+AIRoutes.post(
+  "/predict-score",
+  checkAuth(Role.ADMIN, Role.MEMBER),
+  validateRequest(AIValidation.predictScoreSchema),
+  AIController.predictIdeaScore,
+);
+
+/**
+ * @route   GET /api/v1/ai/admin/stats
+ * @desc    Get AI Analytics for Admin
+ * @access  Private (Admin only)
+ */
+AIRoutes.get("/admin/stats", checkAuth(Role.ADMIN), AIController.getAdminStats);
 
 export default AIRoutes;

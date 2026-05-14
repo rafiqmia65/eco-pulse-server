@@ -3,6 +3,7 @@ import { catchAsync } from "../../shared/catchAsync";
 import { sendResponse } from "../../shared/sendResponse";
 import status from "http-status";
 import { AIService } from "./ai.service";
+import { AIInteractionType } from "../../../../generated/prisma/enums";
 
 /**
  * @desc    Get smart recommendations for user
@@ -28,7 +29,7 @@ const getRecommendations = catchAsync(async (req: Request, res: Response) => {
  * @access  Private
  */
 const chat = catchAsync(async (req: Request, res: Response) => {
-  const { message, conversationId } = req.body;
+  const { message, conversationId } = req.body || {};
   const userId = req.user?.userId;
 
   if (!message) {
@@ -51,6 +52,64 @@ const chat = catchAsync(async (req: Request, res: Response) => {
     message: "AI responded successfully",
     data: result,
   });
+});
+
+/**
+ * @desc    AI Chat Assistant (Streaming)
+ * @route   POST /api/v1/ai/chat-stream
+ * @access  Private
+ */
+const chatStream = catchAsync(async (req: Request, res: Response) => {
+  const { message, conversationId } = req.body || {};
+  const userId = req.user?.userId;
+
+  if (!message) {
+    return sendResponse(res, {
+      httpStatusCode: status.BAD_REQUEST,
+      success: false,
+      message: "Message is required",
+    });
+  }
+
+  const stream = await AIService.chatStream(
+    userId as string,
+    message,
+    conversationId,
+  );
+
+  // Set SSE headers
+  res.setHeader("Content-Type", "text/event-stream");
+  res.setHeader("Cache-Control", "no-cache");
+  res.setHeader("Connection", "keep-alive");
+
+  let fullResponse = "";
+
+  try {
+    for await (const chunk of stream) {
+      const chunkText = chunk.text();
+      fullResponse += chunkText;
+
+      // SSE format: data: <payload>\n\n
+      res.write(`data: ${JSON.stringify({ chunk: chunkText })}\n\n`);
+    }
+
+    // Save interaction after stream completes in background
+    AIService.saveInteraction(
+      userId as string,
+      AIInteractionType.CHAT,
+      message,
+      fullResponse,
+      null,
+      conversationId,
+    ).catch((err) => console.error("Failed to save stream interaction:", err));
+
+    res.write(`data: ${JSON.stringify({ done: true })}\n\n`);
+    res.end();
+  } catch (error) {
+    console.error("Stream error:", error);
+    res.write(`data: ${JSON.stringify({ error: "Stream interrupted" })}\n\n`);
+    res.end();
+  }
 });
 
 /**
@@ -131,7 +190,7 @@ const getMessages = catchAsync(async (req: Request, res: Response) => {
  * @access  Private
  */
 const generateContent = catchAsync(async (req: Request, res: Response) => {
-  const { topic, categoryId } = req.body;
+  const { topic, categoryId } = req.body || {};
   const userId = req.user?.userId;
 
   if (!topic || typeof topic !== "string") {
@@ -164,11 +223,48 @@ const generateContent = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+/**
+ * @desc    Predict idea success score
+ * @route   POST /api/v1/ai/predict-score
+ * @access  Private
+ */
+const predictIdeaScore = catchAsync(async (req: Request, res: Response) => {
+  const userId = req.user?.userId;
+
+  const result = await AIService.predictIdeaScore(userId as string, req.body || {});
+
+  sendResponse(res, {
+    httpStatusCode: status.OK,
+    success: true,
+    message: "Idea score predicted successfully",
+    data: result,
+  });
+});
+
+/**
+ * @desc    Get AI Analytics for Admin
+ * @route   GET /api/v1/ai/admin/stats
+ * @access  Private (Admin only)
+ */
+const getAdminStats = catchAsync(async (req: Request, res: Response) => {
+  const result = await AIService.getAdminStats();
+
+  sendResponse(res, {
+    httpStatusCode: status.OK,
+    success: true,
+    message: "AI stats fetched successfully",
+    data: result,
+  });
+});
+
 export const AIController = {
   getRecommendations,
   chat,
+  chatStream,
   analyzeIdea,
   generateContent,
+  predictIdeaScore,
+  getAdminStats,
   getConversations,
   getMessages,
 };

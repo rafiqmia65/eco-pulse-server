@@ -10,40 +10,40 @@ import {
 import { Prisma } from "../../../../generated/prisma/client";
 import status from "http-status";
 import AppError from "../../helpers/errorHelpers/AppError";
+import { withRetry, handleAIError as sharedHandleAIError } from "../../helpers/aiHelpers";
 
 const genAI = new GoogleGenerativeAI(envVars.GEMINI_API_KEY);
 const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+const fallbackModel = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
 const MAX_DAILY_AI_LIMIT = 10;
 
-/**
- * Professional AI error handler
- */
 const handleAIError = (error: any) => {
-  const errorMessage = error?.message || String(error);
+  return sharedHandleAIError(error);
+};
 
-  if (
-    errorMessage.includes("429") ||
-    errorMessage.includes("Quota exceeded") ||
-    errorMessage.includes("Too Many Requests")
-  ) {
-    throw new AppError(
-      status.TOO_MANY_REQUESTS,
-      "Daily AI limit reached. Please try again tomorrow.",
-    );
+/**
+ * Log AI Interaction for Analytics
+ */
+const logAIInteraction = async (data: {
+  userId?: string;
+  type: AIInteractionType;
+  endpoint: string;
+  prompt: string;
+  response: string;
+  inputTokens: number;
+  outputTokens: number;
+  latency: number;
+  status: number;
+  errorMessage?: string;
+}) => {
+  try {
+    await prisma.aILog.create({
+      data,
+    });
+  } catch (err) {
+    console.error("Failed to log AI interaction:", err);
   }
-
-  if (errorMessage.includes("GoogleGenerativeAI Error")) {
-    throw new AppError(
-      status.SERVICE_UNAVAILABLE,
-      "The AI service is currently busy. Please try again in a few moments.",
-    );
-  }
-
-  throw new AppError(
-    status.INTERNAL_SERVER_ERROR,
-    "Our AI consultant is taking a short break. Please try again shortly.",
-  );
 };
 
 /**
@@ -83,6 +83,8 @@ const saveInteraction = async (
   assistantResponse: string,
   metadata?: Prisma.JsonValue,
   conversationId?: string,
+  inputTokens = 0,
+  outputTokens = 0,
 ) => {
   let conversation;
 
@@ -107,12 +109,14 @@ const saveInteraction = async (
         conversationId: conversation.id,
         role: MessageRole.USER,
         content: userMessage,
+        inputTokens,
       },
       {
         conversationId: conversation.id,
         role: MessageRole.ASSISTANT,
         content: assistantResponse,
         metadata: metadata as Prisma.InputJsonValue,
+        outputTokens,
       },
     ],
   });
@@ -210,23 +214,40 @@ const getRecommendations = async (userId: string) => {
 };
 
 /**
- * 2. AI Chat Assistant
+ * Helper to get chat session with Context-Aware Memory
  */
-const chat = async (
-  userId: string,
-  userMessage: string,
-  conversationId?: string,
-) => {
-  await validateAIUsage(userId);
-
-  // Fetch limited history if conversationId exists
+const getChatSession = async (conversationId?: string, userId?: string) => {
   let history: { role: string; parts: { text: string }[] }[] = [];
+  let userContext = "";
+
+  if (userId) {
+    // Fetch user's top categories and activity to build context
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      include: {
+        watchLists: { include: { idea: { include: { category: true } } } },
+        votes: { include: { idea: { include: { category: true } } } },
+      },
+    });
+
+    if (user) {
+      const interests = [
+        ...new Set([
+          ...user.watchLists.map((w) => w.idea.category.name),
+          ...user.votes.map((v) => v.idea.category.name),
+        ]),
+      ];
+      if (interests.length > 0) {
+        userContext = `User is particularly interested in: ${interests.join(", ")}.`;
+      }
+    }
+  }
 
   if (conversationId) {
     const messages = await prisma.aIMessage.findMany({
       where: { conversationId },
       orderBy: { createdAt: "asc" },
-      take: 6, // smaller history = better focus
+      take: 10, // Increased memory
     });
 
     history = messages.map((m) => ({
@@ -235,12 +256,11 @@ const chat = async (
     }));
   }
 
-  const chatSession = model.startChat({
+  return model.startChat({
     history,
-
     generationConfig: {
       temperature: 0.8,
-      maxOutputTokens: 2000,
+      maxOutputTokens: 1200,
       topP: 0.9,
     },
 
@@ -250,6 +270,7 @@ const chat = async (
         {
           text: `
 You are EcoPulse AI, an advanced sustainability and eco-innovation assistant.
+${userContext}
 
 Rules:
 - Always give complete answers.
@@ -267,6 +288,19 @@ Rules:
       ],
     },
   });
+};
+
+/**
+ * 2. AI Chat Assistant
+ */
+const chat = async (
+  userId: string,
+  userMessage: string,
+  conversationId?: string,
+) => {
+  await validateAIUsage(userId);
+
+  const chatSession = await getChatSession(conversationId, userId);
 
   // Enhanced prompt
   const enhancedMessage = `
@@ -282,9 +316,15 @@ Response Instructions:
 `;
 
   let assistantResponse: string;
+  let inputTokens: number;
+  let outputTokens: number;
+
   try {
     const result = await chatSession.sendMessage(enhancedMessage);
-    assistantResponse = result.response.text()?.trim();
+    const response = await result.response;
+    assistantResponse = response.text()?.trim();
+    inputTokens = response.usageMetadata?.promptTokenCount || 0;
+    outputTokens = response.usageMetadata?.candidatesTokenCount || 0;
   } catch (error) {
     return handleAIError(error);
   }
@@ -304,12 +344,47 @@ Response Instructions:
     assistantResponse,
     null,
     conversationId,
+    inputTokens,
+    outputTokens,
   );
 
   return {
     conversationId: conversation.id,
     response: assistantResponse,
   };
+};
+
+/**
+ * 2b. AI Chat Assistant (Streaming)
+ */
+const chatStream = async (
+  userId: string,
+  userMessage: string,
+  conversationId?: string,
+) => {
+  await validateAIUsage(userId);
+
+  const chatSession = await getChatSession(conversationId, userId);
+
+  // Enhanced prompt
+  const enhancedMessage = `
+User Request:
+${userMessage}
+
+Response Instructions:
+- Give a complete response.
+- Provide detailed explanations.
+- If applicable, provide at least 3 ideas.
+- Use formatting for readability.
+- Avoid generic introductions.
+`;
+
+  try {
+    const result = await chatSession.sendMessageStream(enhancedMessage);
+    return result.stream;
+  } catch (error) {
+    return handleAIError(error);
+  }
 };
 
 /**
@@ -527,11 +602,114 @@ Rules:
   };
 };
 
+/**
+ * 5. AI Idea Score Prediction
+ */
+const predictIdeaScore = async (userId: string, payload: any) => {
+  await validateAIUsage(userId);
+
+  const prompt = `Evaluate this eco-idea and predict its potential success score (1-100).
+    Title: ${payload.title}
+    Problem: ${payload.problem}
+    Solution: ${payload.solution}
+    Category: ${payload.categoryName}
+
+    Return valid JSON:
+    {
+      "score": number,
+      "reasoning": "string",
+      "marketPotential": "High|Medium|Low",
+      "sustainabilityImpact": "High|Medium|Low"
+    }`;
+
+  const startTime = Date.now();
+  try {
+    const result = await withRetry(() => model.generateContent(prompt));
+    const response = await result.response;
+    const text = response.text();
+    const prediction = JSON.parse(text);
+
+    await logAIInteraction({
+      userId,
+      type: AIInteractionType.PREDICTION,
+      endpoint: "/predict-score",
+      prompt,
+      response: text,
+      inputTokens: response.usageMetadata?.promptTokenCount || 0,
+      outputTokens: response.usageMetadata?.candidatesTokenCount || 0,
+      latency: Date.now() - startTime,
+      status: status.OK,
+    });
+
+    return prediction;
+  } catch (error) {
+    return handleAIError(error);
+  }
+};
+
+/**
+ * 6. AI Comment Moderation
+ */
+const moderateComment = async (content: string) => {
+  const prompt = `Analyze this comment for toxicity, hate speech, or harassment.
+    Comment: "${content}"
+    
+    Return valid JSON:
+    {
+      "isToxic": boolean,
+      "score": number (0-100, where 100 is most toxic),
+      "reason": "string"
+    }`;
+
+  try {
+    const result = await withRetry(() => fallbackModel.generateContent(prompt));
+    const response = await result.response;
+    return JSON.parse(response.text());
+  } catch (error) {
+    console.error("Moderation failed:", error);
+    return { isToxic: false, score: 0 }; // Fallback to safe
+  }
+};
+
+/**
+ * 7. Admin AI Analytics
+ */
+const getAdminStats = async () => {
+  const logs = await prisma.aILog.findMany({
+    orderBy: { createdAt: "desc" },
+    take: 100,
+  });
+
+  const totals = await prisma.aILog.aggregate({
+    _sum: {
+      inputTokens: true,
+      outputTokens: true,
+    },
+    _count: {
+      id: true,
+    },
+  });
+
+  return {
+    recentLogs: logs,
+    totals: {
+      totalRequests: totals._count.id,
+      totalInputTokens: totals._sum.inputTokens || 0,
+      totalOutputTokens: totals._sum.outputTokens || 0,
+    },
+  };
+};
+
 export const AIService = {
   getRecommendations,
   chat,
+  chatStream,
   analyzeIdea,
   generateContent,
+  predictIdeaScore,
+  moderateComment,
+  getAdminStats,
   getConversations,
   getMessages,
+  saveInteraction,
 };

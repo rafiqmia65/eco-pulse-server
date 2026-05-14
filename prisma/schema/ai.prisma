@@ -18,8 +18,29 @@ model AIMessage {
     role           MessageRole
     content        String         @db.Text
     metadata       Json? // Store structured results or extra info
+    inputTokens    Int            @default(0)
+    outputTokens   Int            @default(0)
     createdAt      DateTime       @default(now())
 
     @@index([conversationId])
     @@map("ai_message")
+}
+
+model AILog {
+    id            String            @id @default(uuid())
+    userId        String?
+    user          User?             @relation(fields: [userId], references: [id])
+    type          AIInteractionType
+    endpoint      String
+    prompt        String            @db.Text
+    response      String            @db.Text
+    inputTokens   Int               @default(0)
+    outputTokens  Int               @default(0)
+    latency       Int // in milliseconds
+    status        Int // HTTP status code
+    errorMessage  String?           @db.Text
+    createdAt     DateTime          @default(now())
+
+    @@index([userId])
+    @@map("ai_log")
 }

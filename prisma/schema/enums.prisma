@@ -32,6 +32,8 @@ enum AIInteractionType {
     CONTENT_GEN
     RECOMMENDATION
     DATA_ANALYSIS
+    MODERATION
+    PREDICTION
 }
 
 enum MessageRole {
