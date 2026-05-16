@@ -128,7 +128,10 @@ const createComment = async (payload: ICreateCommentPayload) => {
   });
 
   if (moderation.isToxic) {
-    throw new AppError(400, "Your comment was flagged by our AI moderator for inappropriate content.");
+    throw new AppError(
+      400,
+      "Your comment was flagged by our AI moderator for inappropriate content.",
+    );
   }
 
   return comment;
@@ -164,16 +167,29 @@ const updateComment = async (payload: IUpdateCommentPayload) => {
     throw new AppError(403, "You can only update your own comment");
   }
 
-  // 4️ Update the comment
+  // 4️ AI Moderation for updated content
+  const moderation = await AIService.moderateComment(content);
+
+  // 5️ Update the comment (mark moderated and hide if toxic)
   const updated = await prisma.comment.update({
     where: { id: commentId },
     data: {
       content,
+      isModerated: true,
+      moderationScore: moderation.score,
+      isDeleted: moderation.isToxic,
     },
     include: {
       user: true,
     },
   });
+
+  if (moderation.isToxic) {
+    throw new AppError(
+      400,
+      "Your updated comment was flagged by our AI moderator for inappropriate content.",
+    );
+  }
 
   return updated;
 };
